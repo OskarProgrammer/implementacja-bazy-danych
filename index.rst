@@ -23,6 +23,7 @@ Sprawozdanie: Implementacja Bazy Danych
    Rysunek 4: Fizyczny schemat bazy danych opracowany dla silnika SQLite.
 
 Kod do pgadmina:
+„
 -- =========================================
 -- TWORZENIE TABEL - SKLEP INTERNETOWY
 -- PostgreSQL / pgAdmin
@@ -214,6 +215,7 @@ ON Platnosci(ID_Zamowienia);
 
 CREATE INDEX idx_wysylki_zamowienie
 ON Wysylki(ID_Zamowienia);
+”
 
 
 2. Skrypt do wprowadzania danych do bazy danych

@@ -425,6 +425,13 @@ Kod dla SQLite3::
     CREATE INDEX idx_wysylki_zamowienie
     ON Wysylki(ID_Zamowienia);
 
+Reprezentacja bazy danych w sqlite:
+
+.. figure:: dowod_z_sqlite.png
+   :align: center
+   :alt: Zrzut ekranu reprezentacji sqlite z jupyterhub
+
+   Rysunek 6: Lista tabel stworzonych sqlite w jupyterhub.
 
 
 2. Skrypt do wprowadzania danych do bazy danych

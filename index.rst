@@ -217,6 +217,7 @@ Kod dla PGADMINA::
    ON Wysylki(ID_Zamowienia);
 
 Reprezentacja bazy danych w pgadmin na zdalnym serwerze:
+
 .. figure:: dowod_ze_zdalnego_postgres.png
    :align: center
    :alt: Zrzut ekranu z pgAdmin przedstawiający strukturę bazy danych
@@ -224,6 +225,7 @@ Reprezentacja bazy danych w pgadmin na zdalnym serwerze:
    Rysunek 5: Struktura bazy danych w pgAdmin.
 
 Reprezentacja bazy danych w psql na lokalnym serwerze:
+
 .. figure:: dowod_z_lokalnego_serwera.png
    :align: center
    :alt: Zrzut ekranu z pgAdmin przedstawiający strukturę bazy danych
@@ -231,6 +233,7 @@ Reprezentacja bazy danych w psql na lokalnym serwerze:
    Rysunek 6: Struktura bazy danych w pgAdmin.
 
 Kod dla SQLite3::
+
     -- =========================================
     -- TWORZENIE TABEL - SKLEP INTERNETOWY
     -- SQLite

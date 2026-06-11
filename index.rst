@@ -437,7 +437,10 @@ Reprezentacja bazy danych w sqlite:
 2. Skrypt do wprowadzania danych do bazy danych
 ===============================================
 
-Do PostgreSQL::
+Do PostgreSQL:
+.. code-block:: python
+   :linenos:
+
     import csv
     import simplejson
     from sqlalchemy import create_engine, text
@@ -925,7 +928,11 @@ Do PostgreSQL::
     # ============================================================
 
     importuj_csv_postgres(SCIEZKA_CSV, SEPARATOR)
-Do SQLITE::
+
+Do SQLITE:
+.. code-block:: python
+   :linenos:
+
     import csv
     import sqlite3
 

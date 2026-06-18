@@ -7,8 +7,27 @@ Sprawozdanie: Implementacja Bazy Danych
     2. Kamil Lewandowski
     3. Adam Tarkowski
 
+
+Poniższe opracowanie dotyczy wymagania: **Definiowanie bazy danych i wprowadzanie danych do bazy**.
+Dokument zachowuje podział na dwa warianty silnika bazodanowego oraz pokazuje pełną ścieżkę od definicji schematu fizycznego do załadowania danych z pliku wejściowego.
+Wymaganie jest realizowane przez:
+
+- definicję bazy danych w wariancie PostgreSQL,
+- definicję bazy danych w wariancie SQLite,
+- skrypty importujące dane z pliku CSV do obu baz,
+- uzasadnienie wyboru mechanizmów wsadowego wprowadzania danych,
+- komentarz opisujący przebieg importu oraz kontrolę poprawności danych.
+
 1. Implementacja fizycznych schematów
 =====================================
+
+
+W tej części zdefiniowano relacyjną bazę danych dla przykładowego sklepu internetowego.
+Model obejmuje tabele odpowiedzialne za klientów, kategorie, producentów, kody rabatowe, produkty, zamówienia, pozycje zamówień, płatności, wysyłki oraz opinie.
+Taki podział pozwala uniknąć przechowywania wszystkich informacji w jednej płaskiej tabeli i umożliwia kontrolowanie zależności między encjami za pomocą kluczy głównych, kluczy obcych, ograniczeń ``CHECK`` oraz indeksów.
+
+Przygotowano dwa warianty tego samego modelu: pierwszy dla PostgreSQL, a drugi dla SQLite.
+Oba warianty opisują tę samą logikę biznesową, ale różnią się składnią DDL, typami danych oraz sposobem obsługi automatycznie generowanych identyfikatorów.
 
 .. figure:: schemat_fizyczny_postgres.png
    :align: center
@@ -21,6 +40,15 @@ Sprawozdanie: Implementacja Bazy Danych
    :alt: Model fizyczny ERD dla SQLite
 
    Rysunek 4: Fizyczny schemat bazy danych opracowany dla silnika SQLite.
+
+
+Wariant PostgreSQL
+------------------
+
+Wariant PostgreSQL wykorzystuje mechanizmy typowe dla serwerowego systemu zarządzania bazą danych.
+Identyfikatory techniczne są tworzone za pomocą typu ``SERIAL``, kwoty przechowywane są w typie ``NUMERIC(10,2)``, a daty zamówień w typie ``TIMESTAMP``.
+W skrypcie zastosowano również nazwane ograniczenia kluczy obcych, reguły ``ON DELETE CASCADE`` oraz ``ON DELETE SET NULL``, dzięki czemu baza samodzielnie pilnuje spójności danych przy usuwaniu rekordów nadrzędnych.
+Indeksy dodane na kolumnach często używanych w relacjach przyspieszają wyszukiwanie produktów, zamówień, płatności i wysyłek.
 
 Kod dla PGADMINA::
 
@@ -232,6 +260,15 @@ Reprezentacja bazy danych w psql na lokalnym serwerze:
 
    Rysunek 6: Struktura bazy danych w pgAdmin.
 
+
+Wariant SQLite
+--------------
+
+Wariant SQLite zachowuje ten sam układ tabel i relacji, ale został dostosowany do silnika plikowego.
+Zamiast typu ``SERIAL`` zastosowano ``INTEGER PRIMARY KEY AUTOINCREMENT``, a część typów, takich jak napisy i kwoty, została zapisana przy użyciu typów ``TEXT`` oraz ``REAL``.
+W SQLite obsługa kluczy obcych wymaga włączenia mechanizmu ``PRAGMA foreign_keys = ON``, dlatego polecenie to znajduje się na początku skryptu tworzącego strukturę.
+Ten wariant jest prostszy do uruchomienia lokalnie, ponieważ baza jest pojedynczym plikiem, natomiast PostgreSQL lepiej nadaje się do pracy wieloużytkownikowej i wdrożeń serwerowych.
+
 Kod dla SQLite3::
 
     -- =========================================
@@ -436,6 +473,22 @@ Reprezentacja bazy danych w sqlite:
 
 2. Skrypt do wprowadzania danych do bazy danych
 ===============================================
+
+
+W tej części przedstawiono skrypty odpowiedzialne za załadowanie danych do wcześniej zdefiniowanych struktur.
+Źródłem danych jest plik ``dane_plaskie.csv`` rozdzielany średnikiem.
+Skrypt nie kopiuje danych bezpośrednio do jednej tabeli, tylko przekształca dane wejściowe do postaci relacyjnej: z jednego wiersza CSV wyodrębnia informacje o kliencie, produkcie, producencie, kategorii, zamówieniu, płatności, wysyłce, pozycji zamówienia oraz opinii.
+
+Import ma charakter wsadowy, ponieważ cały plik CSV jest przetwarzany w jednym uruchomieniu programu.
+Jednocześnie każdy rekord wejściowy jest obsługiwany kontrolowanie: przed dodaniem danych sprawdzane jest istnienie rekordów powiązanych, wyznaczane są brakujące identyfikatory i wykonywana jest walidacja wartości liczbowych.
+
+
+Mechanizm importu dla PostgreSQL
+--------------------------------
+
+W wariancie PostgreSQL do połączenia z bazą wykorzystano bibliotekę ``SQLAlchemy`` wraz ze sterownikiem ``psycopg``.
+Dane dostępowe są pobierane z pliku ``database_creds.json``, dzięki czemu hasło i nazwa użytkownika nie są wpisane na stałe w kodzie programu.
+Zapytania wykonywane są parametrycznie, co ogranicza ryzyko błędów związanych ze znakami specjalnymi i oddziela treść polecenia SQL od wartości pobranych z pliku CSV.
 
 Do PostgreSQL::
 
@@ -928,6 +981,15 @@ Do PostgreSQL::
     importuj_csv_postgres(SCIEZKA_CSV, SEPARATOR)
 
 
+
+Mechanizm importu dla SQLite
+----------------------------
+
+W wariancie SQLite zastosowano standardową bibliotekę ``sqlite3``.
+Jest to wystarczające rozwiązanie dla bazy plikowej, ponieważ nie wymaga konfiguracji serwera ani dodatkowego sterownika.
+Zapytania również są wykonywane parametrycznie, ale z użyciem znaczników ``?``, zgodnych ze składnią biblioteki ``sqlite3``.
+Logika importu pozostaje taka sama jak w PostgreSQL, dzięki czemu można porównać zachowanie obu silników na tym samym zestawie danych.
+
 Do SQLITE::
 
     import csv
@@ -1353,6 +1415,7 @@ Do SQLITE::
     def importuj_csv_sqlite(sciezka_bazy=SCIEZKA_BAZY, sciezka_csv=SCIEZKA_CSV, separator=SEPARATOR):
         conn = sqlite3.connect(sciezka_bazy)
         cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
 
         licznik_ok = 0
         licznik_bledow = 0
@@ -1398,3 +1461,66 @@ Do SQLITE::
     # ============================================================
 
     importuj_csv_sqlite(SCIEZKA_BAZY, SCIEZKA_CSV, SEPARATOR)
+
+3. Omówienie wyboru mechanizmów i komentarz do importu
+======================================================
+
+Dobór mechanizmu wsadowego wprowadzania danych
+----------------------------------------------
+
+Do importu danych wybrano przetwarzanie pliku CSV w języku Python, ponieważ dane wejściowe mają charakter płaski, a baza docelowa jest znormalizowana.
+Proste użycie poleceń typu ``COPY`` w PostgreSQL albo ``.import`` w SQLite byłoby szybkie, ale w tym przypadku niewystarczające, ponieważ jeden wiersz źródłowy musi zostać rozdzielony na wiele tabel powiązanych relacjami.
+Skrypt musi najpierw ustalić, czy istnieje już klient, producent, kategoria, produkt albo zamówienie, a dopiero później może dodać rekordy zależne, takie jak pozycja zamówienia, płatność, wysyłka i opinia.
+
+Wybrany mechanizm jest kompromisem między prostotą a kontrolą poprawności danych.
+Zamiast ładować dane bezpośrednio do tabel docelowych bez sprawdzania zależności, skrypt wykonuje import w sposób świadomy struktury relacyjnej.
+Dzięki temu możliwe jest ponowne uruchomienie importu bez automatycznego dublowania rekordów o tych samych identyfikatorach lub tych samych kluczowych atrybutach, na przykład adresie e-mail klienta albo nazwie producenta.
+
+W PostgreSQL użyto ``SQLAlchemy`` i parametryzowanych zapytań ``text()``, ponieważ takie podejście dobrze pasuje do aplikacyjnego ładowania danych i ułatwia przeniesienie konfiguracji połączenia poza kod.
+W SQLite użyto biblioteki ``sqlite3``, ponieważ jest dostępna w standardowej instalacji Pythona i dobrze odpowiada charakterowi bazy plikowej.
+W obu wariantach dane są czytane za pomocą ``csv.DictReader``, co pozwala odwoływać się do kolumn po nazwach zamiast po indeksach.
+
+Przebieg procesu wprowadzania danych
+------------------------------------
+
+Proces importu można opisać w następującej kolejności:
+
+1. Program otwiera plik CSV i odczytuje go wiersz po wierszu.
+2. Dla każdego wiersza wykonywane jest czyszczenie wartości pustych oraz konwersja typów liczbowych.
+3. Skrypt sprawdza, czy dany rekord już istnieje w tabeli docelowej.
+4. Jeżeli identyfikator nie został podany w pliku, program próbuje odszukać istniejący rekord po atrybucie naturalnym, na przykład po e-mailu klienta albo nazwie kategorii.
+5. Jeżeli rekord nadal nie istnieje, wyznaczany jest kolejny identyfikator i wykonywane jest polecenie ``INSERT``.
+6. Dane są dodawane w kolejności zgodnej z zależnościami: najpierw tabele słownikowe i nadrzędne, później tabele zależne.
+7. Przy błędzie wykonywany jest ``rollback``, dzięki czemu nie zostaje zapisany częściowo przetworzony wiersz.
+8. Po zakończeniu działania skrypt wypisuje liczbę poprawnie zaimportowanych wierszy oraz listę błędów.
+
+Takie podejście zwiększa bezpieczeństwo importu, ponieważ błąd w jednym wierszu nie musi przerywać całego procesu, a jednocześnie nie zostawia w bazie niespójnych danych.
+Szczególnie ważne jest to przy tabelach zależnych, takich jak ``Pozycje_Zamowienia`` i ``Opinie``, gdzie rekord może zostać dodany dopiero wtedy, gdy istnieje odpowiednie zamówienie i produkt.
+
+Kontrola poprawności i spójności danych
+---------------------------------------
+
+Kontrola poprawności odbywa się na dwóch poziomach.
+Pierwszy poziom znajduje się w samej bazie danych: klucze główne zapewniają unikalność rekordów, klucze obce wymuszają istnienie rekordów nadrzędnych, a ograniczenia ``CHECK`` blokują wartości spoza dopuszczalnego zakresu, na przykład ujemną cenę, zerową ilość produktu albo ocenę spoza zakresu od 1 do 5.
+Drugi poziom znajduje się w skrypcie importującym, który jeszcze przed wykonaniem polecenia ``INSERT`` sprawdza wartości liczbowe, puste pola oraz istnienie rekordów zależnych.
+
+Dzięki temu baza nie jest traktowana wyłącznie jako miejsce przechowywania danych, ale również jako mechanizm pilnujący reguł biznesowych.
+Skrypt aplikacyjny odpowiada za przygotowanie i uporządkowanie danych, natomiast system bazodanowy ostatecznie wymusza ograniczenia integralności.
+
+Różnice między importem do PostgreSQL i SQLite
+----------------------------------------------
+
+Wariant PostgreSQL jest bardziej odpowiedni dla środowiska serwerowego, pracy wielu użytkowników i większych zbiorów danych.
+Zapewnia silniejsze typowanie, rozbudowaną obsługę transakcji, sekwencje identyfikatorów oraz lepsze możliwości późniejszej optymalizacji importu, na przykład przez tabelę tymczasową, ``COPY`` albo import porcjami.
+
+Wariant SQLite jest prostszy organizacyjnie, ponieważ cała baza znajduje się w jednym pliku.
+Dobrze nadaje się do testów, prototypowania, ćwiczeń laboratoryjnych i niewielkich aplikacji lokalnych.
+Wymaga jednak pamiętania o włączeniu obsługi kluczy obcych przez ``PRAGMA foreign_keys = ON`` dla każdego połączenia, jeżeli zależy nam na egzekwowaniu integralności referencyjnej także podczas importu.
+
+Możliwe usprawnienia
+--------------------
+
+Przy małym lub średnim pliku CSV obecne rozwiązanie jest wystarczające i czytelne.
+Dla dużych zbiorów danych można byłoby jednak rozważyć import dwuetapowy: najpierw szybkie wczytanie danych do tabeli tymczasowej, a następnie wykonanie zestawu zapytań ``INSERT INTO ... SELECT ...`` przenoszących dane do tabel docelowych.
+W PostgreSQL można byłoby dodatkowo użyć polecenia ``COPY``, a w SQLite większych transakcji obejmujących wiele wierszy naraz.
+Takie rozwiązania byłyby szybsze, ale mniej przejrzyste od obecnego skryptu i trudniejsze do omówienia na etapie demonstracji działania bazy.

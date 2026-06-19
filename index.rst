@@ -1,5 +1,5 @@
 =========================================
-Sprawozdanie: Implementacja Bazy Danych
+Implementacja Bazy Danych
 =========================================
 
 :Autorzy:
@@ -10,19 +10,30 @@ Sprawozdanie: Implementacja Bazy Danych
 1. Implementacja fizycznych schematów
 =====================================
 
+Schemat bazy zaimplementowano w dwóch wariantach: dla PostgreSQL oraz SQLite.
+Obie wersje zachowują ten sam układ tabel, kluczy głównych i obcych oraz
+podstawowych więzów integralności. Różnice dotyczą przede wszystkim typów danych
+i sposobu automatycznego generowania identyfikatorów.
+
 .. figure:: schemat_fizyczny_postgres.png
    :align: center
    :alt: Model fizyczny ERD dla PostgreSQL
 
-   Rysunek 4: Fizyczny schemat bazy danych opracowany dla silnika PostgreSQL.
+   Rysunek 1: Fizyczny schemat bazy danych opracowany dla silnika PostgreSQL.
 
 .. figure:: schemat_fizyczny_sqlite.png
    :align: center
    :alt: Model fizyczny ERD dla SQLite
 
-   Rysunek 4: Fizyczny schemat bazy danych opracowany dla silnika SQLite.
+   Rysunek 2: Fizyczny schemat bazy danych opracowany dla silnika SQLite.
 
-Kod dla PGADMINA::
+Kod SQL dla PostgreSQL
+----------------------
+
+Ten sam skrypt jest dostępny jako osobny plik:
+:download:`utworz_baze_postgresql.sql <utworz_baze_postgresql.sql>`.
+
+.. code-block:: sql
 
    -- =========================================
    -- TWORZENIE TABEL - SKLEP INTERNETOWY
@@ -86,8 +97,8 @@ Kod dla PGADMINA::
    -- =========================================
    CREATE TABLE Produkty (
       ID_Produktu SERIAL PRIMARY KEY,
-      ID_Kategorii INTEGER,
-      ID_Producenta INTEGER,
+      ID_Kategorii INTEGER NOT NULL,
+      ID_Producenta INTEGER NOT NULL,
       Nazwa VARCHAR(150) NOT NULL,
       Opis TEXT,
       Cena_aktualna NUMERIC(10,2) NOT NULL CHECK (Cena_aktualna >= 0),
@@ -96,12 +107,12 @@ Kod dla PGADMINA::
       CONSTRAINT fk_produkty_kategorie
          FOREIGN KEY (ID_Kategorii)
          REFERENCES Kategorie(ID_Kategorii)
-         ON DELETE SET NULL,
+         ON DELETE RESTRICT,
 
       CONSTRAINT fk_produkty_producenci
          FOREIGN KEY (ID_Producenta)
          REFERENCES Producenci(ID_Producenta)
-         ON DELETE SET NULL
+         ON DELETE RESTRICT
    );
 
    -- =========================================
@@ -111,7 +122,7 @@ Kod dla PGADMINA::
       ID_Zamowienia SERIAL PRIMARY KEY,
       ID_Klienta INTEGER NOT NULL,
       ID_Kodu INTEGER,
-      Data_zamowienia TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      Data_zamowienia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       Status_zamowienia VARCHAR(30) NOT NULL,
 
       CONSTRAINT fk_zamowienia_klienci
@@ -130,7 +141,7 @@ Kod dla PGADMINA::
    -- =========================================
    CREATE TABLE Platnosci (
       ID_Platnosci SERIAL PRIMARY KEY,
-      ID_Zamowienia INTEGER NOT NULL,
+      ID_Zamowienia INTEGER UNIQUE NOT NULL,
       Metoda_platnosci VARCHAR(50) NOT NULL,
       Status_platnosci VARCHAR(30) NOT NULL,
 
@@ -167,9 +178,9 @@ Kod dla PGADMINA::
    -- =========================================
    CREATE TABLE Wysylki (
       ID_Wysylki SERIAL PRIMARY KEY,
-      ID_Zamowienia INTEGER NOT NULL,
+      ID_Zamowienia INTEGER UNIQUE NOT NULL,
       Firma_kurierska VARCHAR(100),
-      Numer_listu VARCHAR(100),
+      Numer_listu VARCHAR(100) UNIQUE,
       Status_paczki VARCHAR(50),
 
       CONSTRAINT fk_wysylki_zamowienia
@@ -191,7 +202,10 @@ Kod dla PGADMINA::
       CONSTRAINT fk_opinie_pozycje
          FOREIGN KEY (ID_Zamowienia, ID_Produktu)
          REFERENCES Pozycje_Zamowienia(ID_Zamowienia, ID_Produktu)
-         ON DELETE CASCADE
+         ON DELETE CASCADE,
+
+      CONSTRAINT uq_opinie_pozycja
+         UNIQUE (ID_Zamowienia, ID_Produktu)
    );
 
    -- =========================================
@@ -222,17 +236,23 @@ Reprezentacja bazy danych w pgadmin na zdalnym serwerze:
    :align: center
    :alt: Zrzut ekranu z pgAdmin przedstawiający strukturę bazy danych
 
-   Rysunek 5: Struktura bazy danych w pgAdmin.
+   Rysunek 3: Lista tabel utworzonych na zdalnym serwerze PostgreSQL w pgAdmin.
 
 Reprezentacja bazy danych w psql na lokalnym serwerze:
 
 .. figure:: dowod_z_lokalnego_serwera.png
    :align: center
-   :alt: Zrzut ekranu z pgAdmin przedstawiający strukturę bazy danych
+   :alt: Lista relacji bazy danych wyświetlona w programie psql
 
-   Rysunek 6: Struktura bazy danych w pgAdmin.
+   Rysunek 4: Lista relacji bazy danych wyświetlona lokalnie w programie psql.
 
-Kod dla SQLite3::
+Kod SQL dla SQLite
+------------------
+
+Ten sam skrypt jest dostępny jako osobny plik:
+:download:`utworz_baze_sqlite.sql <utworz_baze_sqlite.sql>`.
+
+.. code-block:: sql
 
     -- =========================================
     -- TWORZENIE TABEL - SKLEP INTERNETOWY
@@ -299,8 +319,8 @@ Kod dla SQLite3::
     -- =========================================
     CREATE TABLE Produkty (
         ID_Produktu INTEGER PRIMARY KEY AUTOINCREMENT,
-        ID_Kategorii INTEGER,
-        ID_Producenta INTEGER,
+        ID_Kategorii INTEGER NOT NULL,
+        ID_Producenta INTEGER NOT NULL,
         Nazwa TEXT NOT NULL,
         Opis TEXT,
         Cena_aktualna REAL NOT NULL
@@ -310,11 +330,11 @@ Kod dla SQLite3::
 
         FOREIGN KEY (ID_Kategorii)
             REFERENCES Kategorie(ID_Kategorii)
-            ON DELETE SET NULL,
+            ON DELETE RESTRICT,
 
         FOREIGN KEY (ID_Producenta)
             REFERENCES Producenci(ID_Producenta)
-            ON DELETE SET NULL
+            ON DELETE RESTRICT
     );
 
     -- =========================================
@@ -324,7 +344,7 @@ Kod dla SQLite3::
         ID_Zamowienia INTEGER PRIMARY KEY AUTOINCREMENT,
         ID_Klienta INTEGER NOT NULL,
         ID_Kodu INTEGER,
-        Data_zamowienia DATETIME DEFAULT CURRENT_TIMESTAMP,
+        Data_zamowienia DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         Status_zamowienia TEXT NOT NULL,
 
         FOREIGN KEY (ID_Klienta)
@@ -341,7 +361,7 @@ Kod dla SQLite3::
     -- =========================================
     CREATE TABLE Platnosci (
         ID_Platnosci INTEGER PRIMARY KEY AUTOINCREMENT,
-        ID_Zamowienia INTEGER NOT NULL,
+        ID_Zamowienia INTEGER UNIQUE NOT NULL,
         Metoda_platnosci TEXT NOT NULL,
         Status_platnosci TEXT NOT NULL,
 
@@ -377,9 +397,9 @@ Kod dla SQLite3::
     -- =========================================
     CREATE TABLE Wysylki (
         ID_Wysylki INTEGER PRIMARY KEY AUTOINCREMENT,
-        ID_Zamowienia INTEGER NOT NULL,
+        ID_Zamowienia INTEGER UNIQUE NOT NULL,
         Firma_kurierska TEXT,
-        Numer_listu TEXT,
+        Numer_listu TEXT UNIQUE,
         Status_paczki TEXT,
 
         FOREIGN KEY (ID_Zamowienia)
@@ -400,7 +420,9 @@ Kod dla SQLite3::
 
         FOREIGN KEY (ID_Zamowienia, ID_Produktu)
             REFERENCES Pozycje_Zamowienia(ID_Zamowienia, ID_Produktu)
-            ON DELETE CASCADE
+            ON DELETE CASCADE,
+
+        UNIQUE (ID_Zamowienia, ID_Produktu)
     );
 
     -- =========================================
@@ -431,13 +453,44 @@ Reprezentacja bazy danych w sqlite:
    :align: center
    :alt: Zrzut ekranu reprezentacji sqlite z jupyterhub
 
-   Rysunek 6: Lista tabel stworzonych sqlite w jupyterhub.
+   Rysunek 5: Lista tabel utworzonych w bazie SQLite w środowisku JupyterHub.
 
 
 2. Skrypt do wprowadzania danych do bazy danych
 ===============================================
 
-Do PostgreSQL::
+Wybór mechanizmu importu
+------------------------
+
+Do wsadowego zasilania obu baz wybrano plik CSV oraz skrypty napisane
+w języku Python. Takie rozwiązanie pozwala wykorzystać ten sam zestaw danych
+wejściowych dla PostgreSQL i SQLite, a jednocześnie przeprowadzić walidację
+wartości przed wykonaniem instrukcji ``INSERT``. W pliku przyjęto separator
+średnikowy, ponieważ dane tekstowe mogą zawierać przecinki.
+
+Każdy wiersz CSV opisuje jedną pozycję zamówienia. Pole
+``ID_Zamowienia`` jest obowiązkowe i musi mieć tę samą wartość we wszystkich
+wierszach należących do jednego zamówienia. Dzięki temu kilka produktów
+kupionych w ramach jednej transakcji nie jest błędnie interpretowanych jako
+kilka oddzielnych zamówień. Informacje dotyczące klienta, płatności i wysyłki
+mogą powtarzać się w takich wierszach, ale skrypt zapisuje odpowiadające im
+rekordy tylko raz.
+
+W przypadku PostgreSQL identyfikatory pomocnicze są pobierane z sekwencji
+powiązanych z kolumnami typu ``SERIAL``. Po zakończeniu importu sekwencje są
+synchronizowane również z identyfikatorami przekazanymi jawnie w pliku CSV.
+W SQLite brakujące identyfikatory są wyznaczane podczas sekwencyjnego importu
+prowadzonego w ramach jednego połączenia, a kolumny kluczy głównych korzystają
+z mechanizmu ``AUTOINCREMENT``. Po otwarciu połączenia włączana jest ponadto
+obsługa kluczy obcych za pomocą ``PRAGMA foreign_keys = ON``.
+
+Do PostgreSQL
+-------------
+
+Samodzielny skrypt importujący jest dostępny w pliku:
+:download:`import_postgresql.py <import_postgresql.py>`.
+
+.. code-block:: python
 
     import csv
     import simplejson
@@ -539,11 +592,44 @@ Do PostgreSQL::
 
     def next_id(connection, tabela, kolumna_id):
         polecenie = f"""
-        SELECT COALESCE(MAX({kolumna_id.lower()}), 0) + 1
-        FROM {tabela.lower()}
+        SELECT nextval(
+            pg_get_serial_sequence(
+                '{tabela.lower()}',
+                '{kolumna_id.lower()}'
+            )
+        )
         """
 
         return connection.execute(text(polecenie)).scalar()
+
+
+    def synchronizuj_sekwencje(connection):
+        tabele = {
+            "Klienci": "ID_Klienta",
+            "Kategorie": "ID_Kategorii",
+            "Producenci": "ID_Producenta",
+            "Kody_Rabatowe": "ID_Kodu",
+            "Produkty": "ID_Produktu",
+            "Zamowienia": "ID_Zamowienia",
+            "Platnosci": "ID_Platnosci",
+            "Wysylki": "ID_Wysylki",
+            "Opinie": "ID_Opinii",
+        }
+
+        for tabela, kolumna_id in tabele.items():
+            polecenie = f"""
+            SELECT setval(
+                pg_get_serial_sequence(
+                    '{tabela.lower()}',
+                    '{kolumna_id.lower()}'
+                ),
+                COALESCE(MAX({kolumna_id.lower()}), 1),
+                MAX({kolumna_id.lower()}) IS NOT NULL
+            )
+            FROM {tabela.lower()}
+            """
+
+            connection.execute(text(polecenie))
 
 
     def insert(connection, tabela, dane):
@@ -737,8 +823,11 @@ Do PostgreSQL::
 
         id_zamowienia = liczba(row, "ID_Zamowienia")
 
-        if id_zamowienia is None and wartosc(row, "Data_Zamowienia") is not None:
-            id_zamowienia = next_id(connection, "Zamowienia", "ID_Zamowienia")
+        if id_zamowienia is None:
+            raise ValueError(
+                "Brak ID_Zamowienia. Wszystkie pozycje tego samego "
+                "zamówienia muszą mieć wspólny identyfikator."
+            )
 
         if id_zamowienia is not None:
             if id_klienta is None:
@@ -766,6 +855,14 @@ Do PostgreSQL::
         id_platnosci = liczba(row, "ID_Platnosci")
 
         if id_platnosci is None and wartosc(row, "Metoda_Platnosci") is not None:
+            id_platnosci = pobierz_id(
+                connection,
+                "Platnosci",
+                "ID_Platnosci",
+                {"ID_Zamowienia": id_zamowienia}
+            )
+
+        if id_platnosci is None and wartosc(row, "Metoda_Platnosci") is not None:
             id_platnosci = next_id(connection, "Platnosci", "ID_Platnosci")
 
         if id_platnosci is not None:
@@ -775,7 +872,7 @@ Do PostgreSQL::
             if not istnieje(connection, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
                 raise ValueError("Nie można dodać płatności, bo zamówienie nie istnieje")
 
-            if not istnieje(connection, "Platnosci", {"ID_Platnosci": id_platnosci}):
+            if not istnieje(connection, "Platnosci", {"ID_Zamowienia": id_zamowienia}):
                 insert(connection, "Platnosci", {
                     "ID_Platnosci": id_platnosci,
                     "ID_Zamowienia": id_zamowienia,
@@ -790,6 +887,14 @@ Do PostgreSQL::
         id_wysylki = liczba(row, "ID_Wysylki")
 
         if id_wysylki is None and wartosc(row, "Firma_Kurierska") is not None:
+            id_wysylki = pobierz_id(
+                connection,
+                "Wysylki",
+                "ID_Wysylki",
+                {"ID_Zamowienia": id_zamowienia}
+            )
+
+        if id_wysylki is None and wartosc(row, "Firma_Kurierska") is not None:
             id_wysylki = next_id(connection, "Wysylki", "ID_Wysylki")
 
         if id_wysylki is not None:
@@ -799,7 +904,7 @@ Do PostgreSQL::
             if not istnieje(connection, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
                 raise ValueError("Nie można dodać wysyłki, bo zamówienie nie istnieje")
 
-            if not istnieje(connection, "Wysylki", {"ID_Wysylki": id_wysylki}):
+            if not istnieje(connection, "Wysylki", {"ID_Zamowienia": id_zamowienia}):
                 insert(connection, "Wysylki", {
                     "ID_Wysylki": id_wysylki,
                     "ID_Zamowienia": id_zamowienia,
@@ -846,6 +951,17 @@ Do PostgreSQL::
         id_opinii = liczba(row, "ID_Opinii")
 
         if id_opinii is None and wartosc(row, "Ocena_Produktu") is not None:
+            id_opinii = pobierz_id(
+                connection,
+                "Opinie",
+                "ID_Opinii",
+                {
+                    "ID_Zamowienia": id_zamowienia,
+                    "ID_Produktu": id_produktu,
+                }
+            )
+
+        if id_opinii is None and wartosc(row, "Ocena_Produktu") is not None:
             id_opinii = next_id(connection, "Opinie", "ID_Opinii")
 
         if id_opinii is not None:
@@ -866,7 +982,10 @@ Do PostgreSQL::
             if ocena < 1 or ocena > 5:
                 raise ValueError("Ocena musi być w zakresie od 1 do 5")
 
-            if not istnieje(connection, "Opinie", {"ID_Opinii": id_opinii}):
+            if not istnieje(connection, "Opinie", {
+                "ID_Zamowienia": id_zamowienia,
+                "ID_Produktu": id_produktu,
+            }):
                 insert(connection, "Opinie", {
                     "ID_Opinii": id_opinii,
                     "ID_Zamowienia": id_zamowienia,
@@ -909,6 +1028,9 @@ Do PostgreSQL::
                         bledy.append(komunikat)
                         print(komunikat)
 
+                synchronizuj_sekwencje(connection)
+                connection.commit()
+
         print("=" * 80)
         print("IMPORT POSTGRESQL ZAKOŃCZONY")
         print("=" * 80)
@@ -928,7 +1050,13 @@ Do PostgreSQL::
     importuj_csv_postgres(SCIEZKA_CSV, SEPARATOR)
 
 
-Do SQLITE::
+Do SQLite
+---------
+
+Samodzielny skrypt importujący jest dostępny w pliku:
+:download:`import_sqlite.py <import_sqlite.py>`.
+
+.. code-block:: python
 
     import csv
     import sqlite3
@@ -1205,8 +1333,11 @@ Do SQLITE::
 
         id_zamowienia = liczba(row, "ID_Zamowienia")
 
-        if id_zamowienia is None and wartosc(row, "Data_Zamowienia") is not None:
-            id_zamowienia = next_id(cursor, "Zamowienia", "ID_Zamowienia")
+        if id_zamowienia is None:
+            raise ValueError(
+                "Brak ID_Zamowienia. Wszystkie pozycje tego samego "
+                "zamówienia muszą mieć wspólny identyfikator."
+            )
 
         if id_zamowienia is not None:
             if id_klienta is None:
@@ -1234,6 +1365,14 @@ Do SQLITE::
         id_platnosci = liczba(row, "ID_Platnosci")
 
         if id_platnosci is None and wartosc(row, "Metoda_Platnosci") is not None:
+            id_platnosci = pobierz_id(
+                cursor,
+                "Platnosci",
+                "ID_Platnosci",
+                {"ID_Zamowienia": id_zamowienia}
+            )
+
+        if id_platnosci is None and wartosc(row, "Metoda_Platnosci") is not None:
             id_platnosci = next_id(cursor, "Platnosci", "ID_Platnosci")
 
         if id_platnosci is not None:
@@ -1243,7 +1382,7 @@ Do SQLITE::
             if not istnieje(cursor, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
                 raise ValueError("Nie można dodać płatności, bo zamówienie nie istnieje")
 
-            if not istnieje(cursor, "Platnosci", {"ID_Platnosci": id_platnosci}):
+            if not istnieje(cursor, "Platnosci", {"ID_Zamowienia": id_zamowienia}):
                 insert(cursor, "Platnosci", {
                     "ID_Platnosci": id_platnosci,
                     "ID_Zamowienia": id_zamowienia,
@@ -1258,6 +1397,14 @@ Do SQLITE::
         id_wysylki = liczba(row, "ID_Wysylki")
 
         if id_wysylki is None and wartosc(row, "Firma_Kurierska") is not None:
+            id_wysylki = pobierz_id(
+                cursor,
+                "Wysylki",
+                "ID_Wysylki",
+                {"ID_Zamowienia": id_zamowienia}
+            )
+
+        if id_wysylki is None and wartosc(row, "Firma_Kurierska") is not None:
             id_wysylki = next_id(cursor, "Wysylki", "ID_Wysylki")
 
         if id_wysylki is not None:
@@ -1267,7 +1414,7 @@ Do SQLITE::
             if not istnieje(cursor, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
                 raise ValueError("Nie można dodać wysyłki, bo zamówienie nie istnieje")
 
-            if not istnieje(cursor, "Wysylki", {"ID_Wysylki": id_wysylki}):
+            if not istnieje(cursor, "Wysylki", {"ID_Zamowienia": id_zamowienia}):
                 insert(cursor, "Wysylki", {
                     "ID_Wysylki": id_wysylki,
                     "ID_Zamowienia": id_zamowienia,
@@ -1314,6 +1461,17 @@ Do SQLITE::
         id_opinii = liczba(row, "ID_Opinii")
 
         if id_opinii is None and wartosc(row, "Ocena_Produktu") is not None:
+            id_opinii = pobierz_id(
+                cursor,
+                "Opinie",
+                "ID_Opinii",
+                {
+                    "ID_Zamowienia": id_zamowienia,
+                    "ID_Produktu": id_produktu,
+                }
+            )
+
+        if id_opinii is None and wartosc(row, "Ocena_Produktu") is not None:
             id_opinii = next_id(cursor, "Opinie", "ID_Opinii")
 
         if id_opinii is not None:
@@ -1334,7 +1492,10 @@ Do SQLITE::
             if ocena < 1 or ocena > 5:
                 raise ValueError("Ocena musi być w zakresie od 1 do 5")
 
-            if not istnieje(cursor, "Opinie", {"ID_Opinii": id_opinii}):
+            if not istnieje(cursor, "Opinie", {
+                "ID_Zamowienia": id_zamowienia,
+                "ID_Produktu": id_produktu,
+            }):
                 insert(cursor, "Opinie", {
                     "ID_Opinii": id_opinii,
                     "ID_Zamowienia": id_zamowienia,
@@ -1352,6 +1513,7 @@ Do SQLITE::
 
     def importuj_csv_sqlite(sciezka_bazy=SCIEZKA_BAZY, sciezka_csv=SCIEZKA_CSV, separator=SEPARATOR):
         conn = sqlite3.connect(sciezka_bazy)
+        conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
 
         licznik_ok = 0
@@ -1398,3 +1560,24 @@ Do SQLITE::
     # ============================================================
 
     importuj_csv_sqlite(SCIEZKA_BAZY, SCIEZKA_CSV, SEPARATOR)
+
+Komentarz do procesu wprowadzania danych
+----------------------------------------
+
+Rekordy są przetwarzane zgodnie z kolejnością zależności pomiędzy tabelami.
+Najpierw tworzone lub wyszukiwane są dane klienta, kategorii, producenta i kodu
+rabatowego. Następnie skrypt obsługuje produkt i zamówienie, a dopiero później
+płatność, wysyłkę, pozycję zamówienia oraz opcjonalną opinię. Przed dodaniem
+rekordu sprawdzane jest istnienie wymaganych rekordów nadrzędnych.
+
+Każdy wiersz CSV jest przetwarzany w osobnej transakcji. Poprawny wiersz zostaje
+zatwierdzony za pomocą ``commit``, natomiast wystąpienie błędu powoduje
+wykonanie ``rollback``. Dzięki temu błędne dane nie pozostawiają częściowo
+dodanych rekordów pochodzących z tego samego wiersza. Komunikat błędu zawiera
+numer wiersza, co ułatwia odnalezienie niepoprawnej wartości w pliku źródłowym.
+
+Skrypt sprawdza między innymi zakres zniżki i oceny, dodatnią liczbę sztuk,
+nieujemne ceny i stany magazynowe oraz istnienie rekordów wskazywanych przez
+klucze obce. Płatność i wysyłka są identyfikowane na podstawie zamówienia,
+a opinia na podstawie pary: zamówienie i produkt. Zapobiega to tworzeniu
+duplikatów podczas importu kolejnych pozycji należących do tej samej transakcji.

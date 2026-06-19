@@ -142,7 +142,7 @@ CREATE TABLE public.opinie (
     id_zamowienia integer NOT NULL,
     id_produktu integer NOT NULL,
     ocena smallint NOT NULL,
-    komentarz character varying(255),
+    komentarz text,
     CONSTRAINT opinie_ocena_check CHECK (((ocena >= 1) AND (ocena <= 5)))
 );
 
@@ -264,8 +264,8 @@ ALTER SEQUENCE public.producenci_id_producenta_seq OWNED BY public.producenci.id
 
 CREATE TABLE public.produkty (
     id_produktu integer NOT NULL,
-    id_kategorii integer,
-    id_producenta integer,
+    id_kategorii integer NOT NULL,
+    id_producenta integer NOT NULL,
     nazwa character varying(150) NOT NULL,
     opis text,
     cena_aktualna numeric(10,2) NOT NULL,
@@ -344,7 +344,7 @@ CREATE TABLE public.zamowienia (
     id_zamowienia integer NOT NULL,
     id_klienta integer NOT NULL,
     id_kodu integer,
-    data_zamowienia timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    data_zamowienia timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     status_zamowienia character varying(30) NOT NULL
 );
 
@@ -628,6 +628,22 @@ ALTER TABLE ONLY public.opinie
 
 
 --
+-- Name: opinie opinie_id_zamowienia_id_produktu_key; Type: CONSTRAINT; Schema: public; Owner: student23
+--
+
+ALTER TABLE ONLY public.opinie
+    ADD CONSTRAINT opinie_id_zamowienia_id_produktu_key UNIQUE (id_zamowienia, id_produktu);
+
+
+--
+-- Name: platnosci platnosci_id_zamowienia_key; Type: CONSTRAINT; Schema: public; Owner: student23
+--
+
+ALTER TABLE ONLY public.platnosci
+    ADD CONSTRAINT platnosci_id_zamowienia_key UNIQUE (id_zamowienia);
+
+
+--
 -- Name: platnosci platnosci_pkey; Type: CONSTRAINT; Schema: public; Owner: student23
 --
 
@@ -665,6 +681,22 @@ ALTER TABLE ONLY public.produkty
 
 ALTER TABLE ONLY public.wysylki
     ADD CONSTRAINT wysylki_pkey PRIMARY KEY (id_wysylki);
+
+
+--
+-- Name: wysylki wysylki_id_zamowienia_key; Type: CONSTRAINT; Schema: public; Owner: student23
+--
+
+ALTER TABLE ONLY public.wysylki
+    ADD CONSTRAINT wysylki_id_zamowienia_key UNIQUE (id_zamowienia);
+
+
+--
+-- Name: wysylki wysylki_numer_listu_key; Type: CONSTRAINT; Schema: public; Owner: student23
+--
+
+ALTER TABLE ONLY public.wysylki
+    ADD CONSTRAINT wysylki_numer_listu_key UNIQUE (numer_listu);
 
 
 --
@@ -754,7 +786,7 @@ ALTER TABLE ONLY public.pozycje_zamowienia
 --
 
 ALTER TABLE ONLY public.produkty
-    ADD CONSTRAINT fk_produkty_kategorie FOREIGN KEY (id_kategorii) REFERENCES public.kategorie(id_kategorii) ON DELETE SET NULL;
+    ADD CONSTRAINT fk_produkty_kategorie FOREIGN KEY (id_kategorii) REFERENCES public.kategorie(id_kategorii) ON DELETE RESTRICT;
 
 
 --
@@ -762,7 +794,7 @@ ALTER TABLE ONLY public.produkty
 --
 
 ALTER TABLE ONLY public.produkty
-    ADD CONSTRAINT fk_produkty_producenci FOREIGN KEY (id_producenta) REFERENCES public.producenci(id_producenta) ON DELETE SET NULL;
+    ADD CONSTRAINT fk_produkty_producenci FOREIGN KEY (id_producenta) REFERENCES public.producenci(id_producenta) ON DELETE RESTRICT;
 
 
 --

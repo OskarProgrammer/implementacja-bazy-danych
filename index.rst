@@ -492,23 +492,18 @@ Samodzielny skrypt importujący jest dostępny w pliku:
 
 .. code-block:: python
 
+    """Wsadowy import danych sklepu internetowego z CSV do PostgreSQL."""
+
     import csv
+
     import simplejson
     from sqlalchemy import create_engine, text
 
-
-    # ============================================================
-    # KONFIGURACJA
-    # ============================================================
 
     SCIEZKA_CSV = "dane_plaskie.csv"
     SEPARATOR = ";"
     SCIEZKA_CREDS = "./database_creds.json"
 
-
-    # ============================================================
-    # POŁĄCZENIE Z POSTGRESQL
-    # ============================================================
 
     with open(SCIEZKA_CREDS, encoding="utf-8") as db_con_file:
         creds = simplejson.loads(db_con_file.read())
@@ -528,10 +523,6 @@ Samodzielny skrypt importujący jest dostępny w pliku:
 
     dbEngine = create_engine(connection_string)
 
-
-    # ============================================================
-    # FUNKCJE POMOCNICZE
-    # ============================================================
 
     def puste(x):
         return x is None or str(x).strip() == "" or str(x).strip().lower() == "nan"
@@ -559,48 +550,47 @@ Samodzielny skrypt importujący jest dostępny w pliku:
 
 
     def istnieje(connection, tabela, warunek):
-        warunki = [f"{k.lower()} = :{k}" for k in warunek.keys()]
-
+        warunki = [f"{k.lower()} = :{k}" for k in warunek]
         polecenie = f"""
         SELECT 1
         FROM {tabela.lower()}
         WHERE {" AND ".join(warunki)}
         LIMIT 1
         """
-
-        wynik = connection.execute(text(polecenie), warunek).first()
-        return wynik is not None
+        return connection.execute(text(polecenie), warunek).first() is not None
 
 
     def pobierz_id(connection, tabela, kolumna_id, warunek):
-        warunki = [f"{k.lower()} = :{k}" for k in warunek.keys()]
-
+        warunki = [f"{k.lower()} = :{k}" for k in warunek]
         polecenie = f"""
         SELECT {kolumna_id.lower()}
         FROM {tabela.lower()}
         WHERE {" AND ".join(warunki)}
         LIMIT 1
         """
-
         wynik = connection.execute(text(polecenie), warunek).first()
-
-        if wynik:
-            return wynik[0]
-
-        return None
+        return wynik[0] if wynik else None
 
 
     def next_id(connection, tabela, kolumna_id):
-        polecenie = f"""
-        SELECT nextval(
-            pg_get_serial_sequence(
-                '{tabela.lower()}',
-                '{kolumna_id.lower()}'
-            )
-        )
-        """
+        """Synchronizuje sekwencję z tabelą i pobiera kolejny identyfikator."""
+        tabela = tabela.lower()
+        kolumna_id = kolumna_id.lower()
 
-        return connection.execute(text(polecenie)).scalar()
+        connection.execute(text(f"""
+            SELECT setval(
+                pg_get_serial_sequence('{tabela}', '{kolumna_id}'),
+                COALESCE(MAX({kolumna_id}), 1),
+                MAX({kolumna_id}) IS NOT NULL
+            )
+            FROM {tabela}
+        """))
+
+        return connection.execute(text(f"""
+            SELECT nextval(
+                pg_get_serial_sequence('{tabela}', '{kolumna_id}')
+            )
+        """)).scalar()
 
 
     def synchronizuj_sekwencje(connection):
@@ -617,149 +607,103 @@ Samodzielny skrypt importujący jest dostępny w pliku:
         }
 
         for tabela, kolumna_id in tabele.items():
-            polecenie = f"""
-            SELECT setval(
-                pg_get_serial_sequence(
-                    '{tabela.lower()}',
-                    '{kolumna_id.lower()}'
-                ),
-                COALESCE(MAX({kolumna_id.lower()}), 1),
-                MAX({kolumna_id.lower()}) IS NOT NULL
-            )
-            FROM {tabela.lower()}
-            """
-
-            connection.execute(text(polecenie))
+            tabela = tabela.lower()
+            kolumna_id = kolumna_id.lower()
+            connection.execute(text(f"""
+                SELECT setval(
+                    pg_get_serial_sequence('{tabela}', '{kolumna_id}'),
+                    COALESCE(MAX({kolumna_id}), 1),
+                    MAX({kolumna_id}) IS NOT NULL
+                )
+                FROM {tabela}
+            """))
 
 
     def insert(connection, tabela, dane):
         dane = {k: v for k, v in dane.items() if v is not None}
-
         if not dane:
             return
 
-        kolumny = ", ".join([k.lower() for k in dane.keys()])
-        parametry = ", ".join([f":{k}" for k in dane.keys()])
-
+        kolumny = ", ".join(k.lower() for k in dane)
+        parametry = ", ".join(f":{k}" for k in dane)
         polecenie = f"""
         INSERT INTO {tabela.lower()} ({kolumny})
         VALUES ({parametry})
         """
-
         connection.execute(text(polecenie), dane)
 
 
-    # ============================================================
-    # IMPORT JEDNEGO WIERSZA
-    # ============================================================
-
     def importuj_wiersz(connection, row):
-        # Pominięcie przypadkowo wklejonego nagłówka w środku pliku
-        if wartosc(row, "ID_Klienta") == "ID_Klienta":
+        if wartosc(row, "ID_Zamowienia") == "ID_Zamowienia":
             return "Pominięto powtórzony nagłówek"
 
-        # ========================================================
-        # KLIENCI
-        # ========================================================
-
         id_klienta = liczba(row, "ID_Klienta")
-
         if id_klienta is None and wartosc(row, "Email") is not None:
             id_klienta = pobierz_id(
-                connection,
-                "Klienci",
-                "ID_Klienta",
+                connection, "Klienci", "ID_Klienta",
                 {"Email": wartosc(row, "Email")}
             )
-
         if id_klienta is None and wartosc(row, "Imie") is not None:
             id_klienta = next_id(connection, "Klienci", "ID_Klienta")
-
-        if id_klienta is not None:
-            if not istnieje(connection, "Klienci", {"ID_Klienta": id_klienta}):
-                insert(connection, "Klienci", {
-                    "ID_Klienta": id_klienta,
-                    "Imie": wartosc(row, "Imie"),
-                    "Nazwisko": wartosc(row, "Nazwisko"),
-                    "Email": wartosc(row, "Email"),
-                    "Telefon": wartosc(row, "Telefon"),
-                    "Miasto": wartosc(row, "Miasto"),
-                    "Ulica": wartosc(row, "Ulica"),
-                    "Kod_Pocztowy": wartosc(row, "Kod_Pocztowy"),
-                })
-
-        # ========================================================
-        # KATEGORIE
-        # ========================================================
+        if id_klienta is not None and not istnieje(
+            connection, "Klienci", {"ID_Klienta": id_klienta}
+        ):
+            insert(connection, "Klienci", {
+                "ID_Klienta": id_klienta,
+                "Imie": wartosc(row, "Imie"),
+                "Nazwisko": wartosc(row, "Nazwisko"),
+                "Email": wartosc(row, "Email"),
+                "Telefon": wartosc(row, "Telefon"),
+                "Miasto": wartosc(row, "Miasto"),
+                "Ulica": wartosc(row, "Ulica"),
+                "Kod_Pocztowy": wartosc(row, "Kod_Pocztowy"),
+            })
 
         id_kategorii = liczba(row, "ID_Kategorii")
-
         if id_kategorii is None and wartosc(row, "Kategoria") is not None:
             id_kategorii = pobierz_id(
-                connection,
-                "Kategorie",
-                "ID_Kategorii",
+                connection, "Kategorie", "ID_Kategorii",
                 {"Nazwa_kategorii": wartosc(row, "Kategoria")}
             )
-
         if id_kategorii is None and wartosc(row, "Kategoria") is not None:
             id_kategorii = next_id(connection, "Kategorie", "ID_Kategorii")
-
-        if id_kategorii is not None:
-            if not istnieje(connection, "Kategorie", {"ID_Kategorii": id_kategorii}):
-                insert(connection, "Kategorie", {
-                    "ID_Kategorii": id_kategorii,
-                    "Nazwa_kategorii": wartosc(row, "Kategoria"),
-                })
-
-        # ========================================================
-        # PRODUCENCI
-        # ========================================================
+        if id_kategorii is not None and not istnieje(
+            connection, "Kategorie", {"ID_Kategorii": id_kategorii}
+        ):
+            insert(connection, "Kategorie", {
+                "ID_Kategorii": id_kategorii,
+                "Nazwa_kategorii": wartosc(row, "Kategoria"),
+            })
 
         id_producenta = liczba(row, "ID_Producenta")
-
         if id_producenta is None and wartosc(row, "Producent") is not None:
             id_producenta = pobierz_id(
-                connection,
-                "Producenci",
-                "ID_Producenta",
+                connection, "Producenci", "ID_Producenta",
                 {"Nazwa_producenta": wartosc(row, "Producent")}
             )
-
         if id_producenta is None and wartosc(row, "Producent") is not None:
             id_producenta = next_id(connection, "Producenci", "ID_Producenta")
-
-        if id_producenta is not None:
-            if not istnieje(connection, "Producenci", {"ID_Producenta": id_producenta}):
-                insert(connection, "Producenci", {
-                    "ID_Producenta": id_producenta,
-                    "Nazwa_producenta": wartosc(row, "Producent"),
-                    "Kraj_pochodzenia": wartosc(row, "Kraj_Producenta"),
-                })
-
-        # ========================================================
-        # KODY RABATOWE
-        # ========================================================
+        if id_producenta is not None and not istnieje(
+            connection, "Producenci", {"ID_Producenta": id_producenta}
+        ):
+            insert(connection, "Producenci", {
+                "ID_Producenta": id_producenta,
+                "Nazwa_producenta": wartosc(row, "Producent"),
+                "Kraj_pochodzenia": wartosc(row, "Kraj_Producenta"),
+            })
 
         id_kodu = liczba(row, "ID_Kodu")
-
         if id_kodu is None and wartosc(row, "Kod_Rabatowy") is not None:
             id_kodu = pobierz_id(
-                connection,
-                "Kody_Rabatowe",
-                "ID_Kodu",
+                connection, "Kody_Rabatowe", "ID_Kodu",
                 {"Kod_tekstowy": wartosc(row, "Kod_Rabatowy")}
             )
-
         if id_kodu is None and wartosc(row, "Kod_Rabatowy") is not None:
             id_kodu = next_id(connection, "Kody_Rabatowe", "ID_Kodu")
-
         if id_kodu is not None:
             znizka = liczba(row, "Znizka")
-
-            if znizka is not None and (znizka < 0 or znizka > 100):
+            if znizka is not None and not 0 <= znizka <= 100:
                 raise ValueError("Zniżka procentowa musi być w zakresie od 0 do 100")
-
             if not istnieje(connection, "Kody_Rabatowe", {"ID_Kodu": id_kodu}):
                 insert(connection, "Kody_Rabatowe", {
                     "ID_Kodu": id_kodu,
@@ -767,45 +711,23 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                     "Znizka_procentowa": znizka,
                 })
 
-        # ========================================================
-        # PRODUKTY
-        # ========================================================
-
         id_produktu = liczba(row, "ID_Produktu")
-
         if id_produktu is None and wartosc(row, "Nazwa_Produktu") is not None:
             id_produktu = pobierz_id(
-                connection,
-                "Produkty",
-                "ID_Produktu",
+                connection, "Produkty", "ID_Produktu",
                 {"Nazwa": wartosc(row, "Nazwa_Produktu")}
             )
-
         if id_produktu is None and wartosc(row, "Nazwa_Produktu") is not None:
             id_produktu = next_id(connection, "Produkty", "ID_Produktu")
-
         if id_produktu is not None:
-            if id_kategorii is None:
-                raise ValueError("Produkt nie ma kategorii")
-
-            if id_producenta is None:
-                raise ValueError("Produkt nie ma producenta")
-
-            if not istnieje(connection, "Kategorie", {"ID_Kategorii": id_kategorii}):
-                raise ValueError("Nie można dodać produktu, bo kategoria nie istnieje")
-
-            if not istnieje(connection, "Producenci", {"ID_Producenta": id_producenta}):
-                raise ValueError("Nie można dodać produktu, bo producent nie istnieje")
-
+            if id_kategorii is None or id_producenta is None:
+                raise ValueError("Produkt musi mieć kategorię i producenta")
             cena = kwota(row, "Cena_Aktualna")
             stan = liczba(row, "Stan_Magazynowy")
-
             if cena is not None and cena < 0:
                 raise ValueError("Cena aktualna nie może być ujemna")
-
             if stan is not None and stan < 0:
                 raise ValueError("Stan magazynowy nie może być ujemny")
-
             if not istnieje(connection, "Produkty", {"ID_Produktu": id_produktu}):
                 insert(connection, "Produkty", {
                     "ID_Produktu": id_produktu,
@@ -817,62 +739,35 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                     "Stan_magazynowy": stan,
                 })
 
-        # ========================================================
-        # ZAMÓWIENIA
-        # ========================================================
-
         id_zamowienia = liczba(row, "ID_Zamowienia")
-
         if id_zamowienia is None:
             raise ValueError(
                 "Brak ID_Zamowienia. Wszystkie pozycje tego samego "
                 "zamówienia muszą mieć wspólny identyfikator."
             )
+        if id_klienta is None:
+            raise ValueError("Zamówienie nie ma klienta")
+        if not istnieje(connection, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
+            insert(connection, "Zamowienia", {
+                "ID_Zamowienia": id_zamowienia,
+                "ID_Klienta": id_klienta,
+                "ID_Kodu": id_kodu,
+                "Data_zamowienia": wartosc(row, "Data_Zamowienia"),
+                "Status_zamowienia": wartosc(row, "Status_Zamowienia"),
+            })
 
-        if id_zamowienia is not None:
-            if id_klienta is None:
-                raise ValueError("Zamówienie nie ma klienta")
-
-            if not istnieje(connection, "Klienci", {"ID_Klienta": id_klienta}):
-                raise ValueError("Nie można dodać zamówienia, bo klient nie istnieje")
-
-            if id_kodu is not None and not istnieje(connection, "Kody_Rabatowe", {"ID_Kodu": id_kodu}):
-                raise ValueError("Nie można dodać zamówienia, bo kod rabatowy nie istnieje")
-
-            if not istnieje(connection, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
-                insert(connection, "Zamowienia", {
-                    "ID_Zamowienia": id_zamowienia,
-                    "ID_Klienta": id_klienta,
-                    "ID_Kodu": id_kodu,
-                    "Data_zamowienia": wartosc(row, "Data_Zamowienia"),
-                    "Status_zamowienia": wartosc(row, "Status_Zamowienia"),
-                })
-
-        # ========================================================
-        # PŁATNOŚCI
-        # ========================================================
-
-        id_platnosci = liczba(row, "ID_Platnosci")
-
-        if id_platnosci is None and wartosc(row, "Metoda_Platnosci") is not None:
-            id_platnosci = pobierz_id(
-                connection,
-                "Platnosci",
-                "ID_Platnosci",
-                {"ID_Zamowienia": id_zamowienia}
-            )
-
-        if id_platnosci is None and wartosc(row, "Metoda_Platnosci") is not None:
-            id_platnosci = next_id(connection, "Platnosci", "ID_Platnosci")
-
-        if id_platnosci is not None:
-            if id_zamowienia is None:
-                raise ValueError("Płatność nie ma zamówienia")
-
-            if not istnieje(connection, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
-                raise ValueError("Nie można dodać płatności, bo zamówienie nie istnieje")
-
-            if not istnieje(connection, "Platnosci", {"ID_Zamowienia": id_zamowienia}):
+        if wartosc(row, "Metoda_Platnosci") is not None:
+            id_platnosci = liczba(row, "ID_Platnosci")
+            if id_platnosci is None:
+                id_platnosci = pobierz_id(
+                    connection, "Platnosci", "ID_Platnosci",
+                    {"ID_Zamowienia": id_zamowienia}
+                )
+            if id_platnosci is None:
+                id_platnosci = next_id(connection, "Platnosci", "ID_Platnosci")
+            if not istnieje(
+                connection, "Platnosci", {"ID_Zamowienia": id_zamowienia}
+            ):
                 insert(connection, "Platnosci", {
                     "ID_Platnosci": id_platnosci,
                     "ID_Zamowienia": id_zamowienia,
@@ -880,31 +775,18 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                     "Status_platnosci": wartosc(row, "Status_Platnosci"),
                 })
 
-        # ========================================================
-        # WYSYŁKI
-        # ========================================================
-
-        id_wysylki = liczba(row, "ID_Wysylki")
-
-        if id_wysylki is None and wartosc(row, "Firma_Kurierska") is not None:
-            id_wysylki = pobierz_id(
-                connection,
-                "Wysylki",
-                "ID_Wysylki",
-                {"ID_Zamowienia": id_zamowienia}
-            )
-
-        if id_wysylki is None and wartosc(row, "Firma_Kurierska") is not None:
-            id_wysylki = next_id(connection, "Wysylki", "ID_Wysylki")
-
-        if id_wysylki is not None:
-            if id_zamowienia is None:
-                raise ValueError("Wysyłka nie ma zamówienia")
-
-            if not istnieje(connection, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
-                raise ValueError("Nie można dodać wysyłki, bo zamówienie nie istnieje")
-
-            if not istnieje(connection, "Wysylki", {"ID_Zamowienia": id_zamowienia}):
+        if wartosc(row, "Firma_Kurierska") is not None:
+            id_wysylki = liczba(row, "ID_Wysylki")
+            if id_wysylki is None:
+                id_wysylki = pobierz_id(
+                    connection, "Wysylki", "ID_Wysylki",
+                    {"ID_Zamowienia": id_zamowienia}
+                )
+            if id_wysylki is None:
+                id_wysylki = next_id(connection, "Wysylki", "ID_Wysylki")
+            if not istnieje(
+                connection, "Wysylki", {"ID_Zamowienia": id_zamowienia}
+            ):
                 insert(connection, "Wysylki", {
                     "ID_Wysylki": id_wysylki,
                     "ID_Zamowienia": id_zamowienia,
@@ -913,93 +795,53 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                     "Status_paczki": wartosc(row, "Status_Paczki"),
                 })
 
-        # ========================================================
-        # POZYCJE ZAMÓWIENIA
-        # ========================================================
-
-        if id_zamowienia is not None and id_produktu is not None and wartosc(row, "Ilosc_Zakupiona") is not None:
+        if id_produktu is not None and wartosc(row, "Ilosc_Zakupiona") is not None:
             ilosc = liczba(row, "Ilosc_Zakupiona")
             cena_historyczna = kwota(row, "Cena_Historyczna")
-
-            if ilosc <= 0:
+            if ilosc is None or ilosc <= 0:
                 raise ValueError("Ilość w pozycji zamówienia musi być większa od 0")
-
-            if cena_historyczna is not None and cena_historyczna < 0:
-                raise ValueError("Cena historyczna nie może być ujemna")
-
-            if not istnieje(connection, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
-                raise ValueError("Nie można dodać pozycji, bo zamówienie nie istnieje")
-
-            if not istnieje(connection, "Produkty", {"ID_Produktu": id_produktu}):
-                raise ValueError("Nie można dodać pozycji, bo produkt nie istnieje")
-
-            if not istnieje(connection, "Pozycje_Zamowienia", {
+            if cena_historyczna is None or cena_historyczna < 0:
+                raise ValueError("Cena historyczna musi być nieujemna")
+            warunek_pozycji = {
                 "ID_Zamowienia": id_zamowienia,
                 "ID_Produktu": id_produktu,
-            }):
+            }
+            if not istnieje(connection, "Pozycje_Zamowienia", warunek_pozycji):
                 insert(connection, "Pozycje_Zamowienia", {
-                    "ID_Zamowienia": id_zamowienia,
-                    "ID_Produktu": id_produktu,
+                    **warunek_pozycji,
                     "Ilosc": ilosc,
                     "Cena_historyczna": cena_historyczna,
                 })
 
-        # ========================================================
-        # OPINIE
-        # ========================================================
-
-        id_opinii = liczba(row, "ID_Opinii")
-
-        if id_opinii is None and wartosc(row, "Ocena_Produktu") is not None:
-            id_opinii = pobierz_id(
-                connection,
-                "Opinie",
-                "ID_Opinii",
-                {
-                    "ID_Zamowienia": id_zamowienia,
-                    "ID_Produktu": id_produktu,
-                }
-            )
-
-        if id_opinii is None and wartosc(row, "Ocena_Produktu") is not None:
-            id_opinii = next_id(connection, "Opinie", "ID_Opinii")
-
-        if id_opinii is not None:
-            if id_zamowienia is None:
-                raise ValueError("Opinia nie ma zamówienia")
-
-            if id_produktu is None:
-                raise ValueError("Opinia nie ma produktu")
-
-            if not istnieje(connection, "Pozycje_Zamowienia", {
+        if wartosc(row, "Ocena_Produktu") is not None:
+            warunek_opinii = {
                 "ID_Zamowienia": id_zamowienia,
                 "ID_Produktu": id_produktu,
-            }):
-                raise ValueError("Nie można dodać opinii, bo nie istnieje taka pozycja zamówienia")
-
+            }
+            if not istnieje(connection, "Pozycje_Zamowienia", warunek_opinii):
+                raise ValueError(
+                    "Nie można dodać opinii, bo nie istnieje taka pozycja zamówienia"
+                )
             ocena = liczba(row, "Ocena_Produktu")
-
-            if ocena < 1 or ocena > 5:
+            if ocena is None or not 1 <= ocena <= 5:
                 raise ValueError("Ocena musi być w zakresie od 1 do 5")
-
-            if not istnieje(connection, "Opinie", {
-                "ID_Zamowienia": id_zamowienia,
-                "ID_Produktu": id_produktu,
-            }):
+            id_opinii = liczba(row, "ID_Opinii")
+            if id_opinii is None:
+                id_opinii = pobierz_id(
+                    connection, "Opinie", "ID_Opinii", warunek_opinii
+                )
+            if id_opinii is None:
+                id_opinii = next_id(connection, "Opinie", "ID_Opinii")
+            if not istnieje(connection, "Opinie", warunek_opinii):
                 insert(connection, "Opinie", {
                     "ID_Opinii": id_opinii,
-                    "ID_Zamowienia": id_zamowienia,
-                    "ID_Produktu": id_produktu,
+                    **warunek_opinii,
                     "Ocena": ocena,
                     "Komentarz": wartosc(row, "Komentarz"),
                 })
 
         return "OK"
 
-
-    # ============================================================
-    # GŁÓWNA FUNKCJA IMPORTU
-    # ============================================================
 
     def importuj_csv_postgres(sciezka_csv=SCIEZKA_CSV, separator=SEPARATOR):
         licznik_ok = 0
@@ -1013,14 +855,12 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                 for nr, row in enumerate(reader, start=2):
                     try:
                         wynik = importuj_wiersz(connection, row)
-
                         if wynik == "OK":
                             connection.commit()
                             licznik_ok += 1
                         else:
                             connection.rollback()
                             print(f"Wiersz {nr}: {wynik}")
-
                     except Exception as blad:
                         connection.rollback()
                         licznik_bledow += 1
@@ -1043,12 +883,8 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                 print("-", blad)
 
 
-    # ============================================================
-    # URUCHOMIENIE
-    # ============================================================
-
-    importuj_csv_postgres(SCIEZKA_CSV, SEPARATOR)
-
+    if __name__ == "__main__":
+        importuj_csv_postgres(SCIEZKA_CSV, SEPARATOR)
 
 Do SQLite
 ---------
@@ -1058,22 +894,16 @@ Samodzielny skrypt importujący jest dostępny w pliku:
 
 .. code-block:: python
 
+    """Wsadowy import danych sklepu internetowego z CSV do SQLite."""
+
     import csv
     import sqlite3
 
-
-    # ============================================================
-    # KONFIGURACJA
-    # ============================================================
 
     SCIEZKA_BAZY = "sklep.db"
     SCIEZKA_CSV = "dane_plaskie.csv"
     SEPARATOR = ";"
 
-
-    # ============================================================
-    # FUNKCJE POMOCNICZE
-    # ============================================================
 
     def puste(x):
         return x is None or str(x).strip() == "" or str(x).strip().lower() == "nan"
@@ -1107,169 +937,115 @@ Samodzielny skrypt importujący jest dostępny w pliku:
 
 
     def istnieje(cursor, tabela, warunek):
-        kolumny = [f'"{k}" = ?' for k in warunek.keys()]
-        wartosci = list(warunek.values())
-
+        kolumny = [f'"{k}" = ?' for k in warunek]
         polecenie = f'''
         SELECT 1
         FROM "{tabela}"
         WHERE {" AND ".join(kolumny)}
         LIMIT 1
         '''
-
-        cursor.execute(polecenie, wartosci)
+        cursor.execute(polecenie, list(warunek.values()))
         return cursor.fetchone() is not None
 
 
     def pobierz_id(cursor, tabela, kolumna_id, warunek):
-        kolumny = [f'"{k}" = ?' for k in warunek.keys()]
-        wartosci = list(warunek.values())
-
+        kolumny = [f'"{k}" = ?' for k in warunek]
         polecenie = f'''
         SELECT "{kolumna_id}"
         FROM "{tabela}"
         WHERE {" AND ".join(kolumny)}
         LIMIT 1
         '''
-
-        cursor.execute(polecenie, wartosci)
+        cursor.execute(polecenie, list(warunek.values()))
         wynik = cursor.fetchone()
-
-        if wynik:
-            return wynik[0]
-
-        return None
+        return wynik[0] if wynik else None
 
 
     def insert(cursor, tabela, dane):
         dane = {k: v for k, v in dane.items() if v is not None}
-
         if not dane:
             return
 
-        kolumny = ", ".join([f'"{k}"' for k in dane.keys()])
-        znaki = ", ".join(["?" for _ in dane.keys()])
-        wartosci = list(dane.values())
-
+        kolumny = ", ".join(f'"{k}"' for k in dane)
+        znaki = ", ".join("?" for _ in dane)
         polecenie = f'''
         INSERT INTO "{tabela}" ({kolumny})
         VALUES ({znaki})
         '''
+        cursor.execute(polecenie, list(dane.values()))
 
-        cursor.execute(polecenie, wartosci)
-
-
-    # ============================================================
-    # IMPORT JEDNEGO WIERSZA
-    # ============================================================
 
     def importuj_wiersz(cursor, row):
-        # Pominięcie przypadkowo wklejonego nagłówka w środku pliku
-        if wartosc(row, "ID_Klienta") == "ID_Klienta":
+        if wartosc(row, "ID_Zamowienia") == "ID_Zamowienia":
             return "Pominięto powtórzony nagłówek"
 
-        # ========================================================
-        # KLIENCI
-        # ========================================================
-
         id_klienta = liczba(row, "ID_Klienta")
-
         if id_klienta is None and wartosc(row, "Email") is not None:
             id_klienta = pobierz_id(
-                cursor,
-                "Klienci",
-                "ID_Klienta",
+                cursor, "Klienci", "ID_Klienta",
                 {"Email": wartosc(row, "Email")}
             )
-
         if id_klienta is None and wartosc(row, "Imie") is not None:
             id_klienta = next_id(cursor, "Klienci", "ID_Klienta")
-
-        if id_klienta is not None:
-            if not istnieje(cursor, "Klienci", {"ID_Klienta": id_klienta}):
-                insert(cursor, "Klienci", {
-                    "ID_Klienta": id_klienta,
-                    "Imie": wartosc(row, "Imie"),
-                    "Nazwisko": wartosc(row, "Nazwisko"),
-                    "Email": wartosc(row, "Email"),
-                    "Telefon": wartosc(row, "Telefon"),
-                    "Miasto": wartosc(row, "Miasto"),
-                    "Ulica": wartosc(row, "Ulica"),
-                    "Kod_Pocztowy": wartosc(row, "Kod_Pocztowy"),
-                })
-
-        # ========================================================
-        # KATEGORIE
-        # ========================================================
+        if id_klienta is not None and not istnieje(
+            cursor, "Klienci", {"ID_Klienta": id_klienta}
+        ):
+            insert(cursor, "Klienci", {
+                "ID_Klienta": id_klienta,
+                "Imie": wartosc(row, "Imie"),
+                "Nazwisko": wartosc(row, "Nazwisko"),
+                "Email": wartosc(row, "Email"),
+                "Telefon": wartosc(row, "Telefon"),
+                "Miasto": wartosc(row, "Miasto"),
+                "Ulica": wartosc(row, "Ulica"),
+                "Kod_Pocztowy": wartosc(row, "Kod_Pocztowy"),
+            })
 
         id_kategorii = liczba(row, "ID_Kategorii")
-
         if id_kategorii is None and wartosc(row, "Kategoria") is not None:
             id_kategorii = pobierz_id(
-                cursor,
-                "Kategorie",
-                "ID_Kategorii",
+                cursor, "Kategorie", "ID_Kategorii",
                 {"Nazwa_kategorii": wartosc(row, "Kategoria")}
             )
-
         if id_kategorii is None and wartosc(row, "Kategoria") is not None:
             id_kategorii = next_id(cursor, "Kategorie", "ID_Kategorii")
-
-        if id_kategorii is not None:
-            if not istnieje(cursor, "Kategorie", {"ID_Kategorii": id_kategorii}):
-                insert(cursor, "Kategorie", {
-                    "ID_Kategorii": id_kategorii,
-                    "Nazwa_kategorii": wartosc(row, "Kategoria"),
-                })
-
-        # ========================================================
-        # PRODUCENCI
-        # ========================================================
+        if id_kategorii is not None and not istnieje(
+            cursor, "Kategorie", {"ID_Kategorii": id_kategorii}
+        ):
+            insert(cursor, "Kategorie", {
+                "ID_Kategorii": id_kategorii,
+                "Nazwa_kategorii": wartosc(row, "Kategoria"),
+            })
 
         id_producenta = liczba(row, "ID_Producenta")
-
         if id_producenta is None and wartosc(row, "Producent") is not None:
             id_producenta = pobierz_id(
-                cursor,
-                "Producenci",
-                "ID_Producenta",
+                cursor, "Producenci", "ID_Producenta",
                 {"Nazwa_producenta": wartosc(row, "Producent")}
             )
-
         if id_producenta is None and wartosc(row, "Producent") is not None:
             id_producenta = next_id(cursor, "Producenci", "ID_Producenta")
-
-        if id_producenta is not None:
-            if not istnieje(cursor, "Producenci", {"ID_Producenta": id_producenta}):
-                insert(cursor, "Producenci", {
-                    "ID_Producenta": id_producenta,
-                    "Nazwa_producenta": wartosc(row, "Producent"),
-                    "Kraj_pochodzenia": wartosc(row, "Kraj_Producenta"),
-                })
-
-        # ========================================================
-        # KODY RABATOWE
-        # ========================================================
+        if id_producenta is not None and not istnieje(
+            cursor, "Producenci", {"ID_Producenta": id_producenta}
+        ):
+            insert(cursor, "Producenci", {
+                "ID_Producenta": id_producenta,
+                "Nazwa_producenta": wartosc(row, "Producent"),
+                "Kraj_pochodzenia": wartosc(row, "Kraj_Producenta"),
+            })
 
         id_kodu = liczba(row, "ID_Kodu")
-
         if id_kodu is None and wartosc(row, "Kod_Rabatowy") is not None:
             id_kodu = pobierz_id(
-                cursor,
-                "Kody_Rabatowe",
-                "ID_Kodu",
+                cursor, "Kody_Rabatowe", "ID_Kodu",
                 {"Kod_tekstowy": wartosc(row, "Kod_Rabatowy")}
             )
-
         if id_kodu is None and wartosc(row, "Kod_Rabatowy") is not None:
             id_kodu = next_id(cursor, "Kody_Rabatowe", "ID_Kodu")
-
         if id_kodu is not None:
             znizka = liczba(row, "Znizka")
-
-            if znizka is not None and (znizka < 0 or znizka > 100):
+            if znizka is not None and not 0 <= znizka <= 100:
                 raise ValueError("Zniżka procentowa musi być w zakresie od 0 do 100")
-
             if not istnieje(cursor, "Kody_Rabatowe", {"ID_Kodu": id_kodu}):
                 insert(cursor, "Kody_Rabatowe", {
                     "ID_Kodu": id_kodu,
@@ -1277,45 +1053,23 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                     "Znizka_procentowa": znizka,
                 })
 
-        # ========================================================
-        # PRODUKTY
-        # ========================================================
-
         id_produktu = liczba(row, "ID_Produktu")
-
         if id_produktu is None and wartosc(row, "Nazwa_Produktu") is not None:
             id_produktu = pobierz_id(
-                cursor,
-                "Produkty",
-                "ID_Produktu",
+                cursor, "Produkty", "ID_Produktu",
                 {"Nazwa": wartosc(row, "Nazwa_Produktu")}
             )
-
         if id_produktu is None and wartosc(row, "Nazwa_Produktu") is not None:
             id_produktu = next_id(cursor, "Produkty", "ID_Produktu")
-
         if id_produktu is not None:
-            if id_kategorii is None:
-                raise ValueError("Produkt nie ma kategorii")
-
-            if id_producenta is None:
-                raise ValueError("Produkt nie ma producenta")
-
-            if not istnieje(cursor, "Kategorie", {"ID_Kategorii": id_kategorii}):
-                raise ValueError("Nie można dodać produktu, bo kategoria nie istnieje")
-
-            if not istnieje(cursor, "Producenci", {"ID_Producenta": id_producenta}):
-                raise ValueError("Nie można dodać produktu, bo producent nie istnieje")
-
+            if id_kategorii is None or id_producenta is None:
+                raise ValueError("Produkt musi mieć kategorię i producenta")
             cena = kwota(row, "Cena_Aktualna")
             stan = liczba(row, "Stan_Magazynowy")
-
             if cena is not None and cena < 0:
                 raise ValueError("Cena aktualna nie może być ujemna")
-
             if stan is not None and stan < 0:
                 raise ValueError("Stan magazynowy nie może być ujemny")
-
             if not istnieje(cursor, "Produkty", {"ID_Produktu": id_produktu}):
                 insert(cursor, "Produkty", {
                     "ID_Produktu": id_produktu,
@@ -1327,61 +1081,32 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                     "Stan_magazynowy": stan,
                 })
 
-        # ========================================================
-        # ZAMÓWIENIA
-        # ========================================================
-
         id_zamowienia = liczba(row, "ID_Zamowienia")
-
         if id_zamowienia is None:
             raise ValueError(
                 "Brak ID_Zamowienia. Wszystkie pozycje tego samego "
                 "zamówienia muszą mieć wspólny identyfikator."
             )
+        if id_klienta is None:
+            raise ValueError("Zamówienie nie ma klienta")
+        if not istnieje(cursor, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
+            insert(cursor, "Zamowienia", {
+                "ID_Zamowienia": id_zamowienia,
+                "ID_Klienta": id_klienta,
+                "ID_Kodu": id_kodu,
+                "Data_zamowienia": wartosc(row, "Data_Zamowienia"),
+                "Status_zamowienia": wartosc(row, "Status_Zamowienia"),
+            })
 
-        if id_zamowienia is not None:
-            if id_klienta is None:
-                raise ValueError("Zamówienie nie ma klienta")
-
-            if not istnieje(cursor, "Klienci", {"ID_Klienta": id_klienta}):
-                raise ValueError("Nie można dodać zamówienia, bo klient nie istnieje")
-
-            if id_kodu is not None and not istnieje(cursor, "Kody_Rabatowe", {"ID_Kodu": id_kodu}):
-                raise ValueError("Nie można dodać zamówienia, bo kod rabatowy nie istnieje")
-
-            if not istnieje(cursor, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
-                insert(cursor, "Zamowienia", {
-                    "ID_Zamowienia": id_zamowienia,
-                    "ID_Klienta": id_klienta,
-                    "ID_Kodu": id_kodu,
-                    "Data_zamowienia": wartosc(row, "Data_Zamowienia"),
-                    "Status_zamowienia": wartosc(row, "Status_Zamowienia"),
-                })
-
-        # ========================================================
-        # PŁATNOŚCI
-        # ========================================================
-
-        id_platnosci = liczba(row, "ID_Platnosci")
-
-        if id_platnosci is None and wartosc(row, "Metoda_Platnosci") is not None:
-            id_platnosci = pobierz_id(
-                cursor,
-                "Platnosci",
-                "ID_Platnosci",
-                {"ID_Zamowienia": id_zamowienia}
-            )
-
-        if id_platnosci is None and wartosc(row, "Metoda_Platnosci") is not None:
-            id_platnosci = next_id(cursor, "Platnosci", "ID_Platnosci")
-
-        if id_platnosci is not None:
-            if id_zamowienia is None:
-                raise ValueError("Płatność nie ma zamówienia")
-
-            if not istnieje(cursor, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
-                raise ValueError("Nie można dodać płatności, bo zamówienie nie istnieje")
-
+        if wartosc(row, "Metoda_Platnosci") is not None:
+            id_platnosci = liczba(row, "ID_Platnosci")
+            if id_platnosci is None:
+                id_platnosci = pobierz_id(
+                    cursor, "Platnosci", "ID_Platnosci",
+                    {"ID_Zamowienia": id_zamowienia}
+                )
+            if id_platnosci is None:
+                id_platnosci = next_id(cursor, "Platnosci", "ID_Platnosci")
             if not istnieje(cursor, "Platnosci", {"ID_Zamowienia": id_zamowienia}):
                 insert(cursor, "Platnosci", {
                     "ID_Platnosci": id_platnosci,
@@ -1390,30 +1115,15 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                     "Status_platnosci": wartosc(row, "Status_Platnosci"),
                 })
 
-        # ========================================================
-        # WYSYŁKI
-        # ========================================================
-
-        id_wysylki = liczba(row, "ID_Wysylki")
-
-        if id_wysylki is None and wartosc(row, "Firma_Kurierska") is not None:
-            id_wysylki = pobierz_id(
-                cursor,
-                "Wysylki",
-                "ID_Wysylki",
-                {"ID_Zamowienia": id_zamowienia}
-            )
-
-        if id_wysylki is None and wartosc(row, "Firma_Kurierska") is not None:
-            id_wysylki = next_id(cursor, "Wysylki", "ID_Wysylki")
-
-        if id_wysylki is not None:
-            if id_zamowienia is None:
-                raise ValueError("Wysyłka nie ma zamówienia")
-
-            if not istnieje(cursor, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
-                raise ValueError("Nie można dodać wysyłki, bo zamówienie nie istnieje")
-
+        if wartosc(row, "Firma_Kurierska") is not None:
+            id_wysylki = liczba(row, "ID_Wysylki")
+            if id_wysylki is None:
+                id_wysylki = pobierz_id(
+                    cursor, "Wysylki", "ID_Wysylki",
+                    {"ID_Zamowienia": id_zamowienia}
+                )
+            if id_wysylki is None:
+                id_wysylki = next_id(cursor, "Wysylki", "ID_Wysylki")
             if not istnieje(cursor, "Wysylki", {"ID_Zamowienia": id_zamowienia}):
                 insert(cursor, "Wysylki", {
                     "ID_Wysylki": id_wysylki,
@@ -1423,83 +1133,45 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                     "Status_paczki": wartosc(row, "Status_Paczki"),
                 })
 
-        # ========================================================
-        # POZYCJE ZAMÓWIENIA
-        # ========================================================
-
-        if id_zamowienia is not None and id_produktu is not None and wartosc(row, "Ilosc_Zakupiona") is not None:
+        if id_produktu is not None and wartosc(row, "Ilosc_Zakupiona") is not None:
             ilosc = liczba(row, "Ilosc_Zakupiona")
             cena_historyczna = kwota(row, "Cena_Historyczna")
-
-            if ilosc <= 0:
+            if ilosc is None or ilosc <= 0:
                 raise ValueError("Ilość w pozycji zamówienia musi być większa od 0")
-
-            if cena_historyczna is not None and cena_historyczna < 0:
-                raise ValueError("Cena historyczna nie może być ujemna")
-
-            if not istnieje(cursor, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
-                raise ValueError("Nie można dodać pozycji, bo zamówienie nie istnieje")
-
-            if not istnieje(cursor, "Produkty", {"ID_Produktu": id_produktu}):
-                raise ValueError("Nie można dodać pozycji, bo produkt nie istnieje")
-
-            if not istnieje(cursor, "Pozycje_Zamowienia", {
+            if cena_historyczna is None or cena_historyczna < 0:
+                raise ValueError("Cena historyczna musi być nieujemna")
+            warunek_pozycji = {
                 "ID_Zamowienia": id_zamowienia,
                 "ID_Produktu": id_produktu,
-            }):
+            }
+            if not istnieje(cursor, "Pozycje_Zamowienia", warunek_pozycji):
                 insert(cursor, "Pozycje_Zamowienia", {
-                    "ID_Zamowienia": id_zamowienia,
-                    "ID_Produktu": id_produktu,
+                    **warunek_pozycji,
                     "Ilosc": ilosc,
                     "Cena_historyczna": cena_historyczna,
                 })
 
-        # ========================================================
-        # OPINIE
-        # ========================================================
-
-        id_opinii = liczba(row, "ID_Opinii")
-
-        if id_opinii is None and wartosc(row, "Ocena_Produktu") is not None:
-            id_opinii = pobierz_id(
-                cursor,
-                "Opinie",
-                "ID_Opinii",
-                {
-                    "ID_Zamowienia": id_zamowienia,
-                    "ID_Produktu": id_produktu,
-                }
-            )
-
-        if id_opinii is None and wartosc(row, "Ocena_Produktu") is not None:
-            id_opinii = next_id(cursor, "Opinie", "ID_Opinii")
-
-        if id_opinii is not None:
-            if id_zamowienia is None:
-                raise ValueError("Opinia nie ma zamówienia")
-
-            if id_produktu is None:
-                raise ValueError("Opinia nie ma produktu")
-
-            if not istnieje(cursor, "Pozycje_Zamowienia", {
+        if wartosc(row, "Ocena_Produktu") is not None:
+            warunek_opinii = {
                 "ID_Zamowienia": id_zamowienia,
                 "ID_Produktu": id_produktu,
-            }):
-                raise ValueError("Nie można dodać opinii, bo nie istnieje taka pozycja zamówienia")
-
+            }
+            if not istnieje(cursor, "Pozycje_Zamowienia", warunek_opinii):
+                raise ValueError(
+                    "Nie można dodać opinii, bo nie istnieje taka pozycja zamówienia"
+                )
             ocena = liczba(row, "Ocena_Produktu")
-
-            if ocena < 1 or ocena > 5:
+            if ocena is None or not 1 <= ocena <= 5:
                 raise ValueError("Ocena musi być w zakresie od 1 do 5")
-
-            if not istnieje(cursor, "Opinie", {
-                "ID_Zamowienia": id_zamowienia,
-                "ID_Produktu": id_produktu,
-            }):
+            id_opinii = liczba(row, "ID_Opinii")
+            if id_opinii is None:
+                id_opinii = pobierz_id(cursor, "Opinie", "ID_Opinii", warunek_opinii)
+            if id_opinii is None:
+                id_opinii = next_id(cursor, "Opinie", "ID_Opinii")
+            if not istnieje(cursor, "Opinie", warunek_opinii):
                 insert(cursor, "Opinie", {
                     "ID_Opinii": id_opinii,
-                    "ID_Zamowienia": id_zamowienia,
-                    "ID_Produktu": id_produktu,
+                    **warunek_opinii,
                     "Ocena": ocena,
                     "Komentarz": wartosc(row, "Komentarz"),
                 })
@@ -1507,15 +1179,14 @@ Samodzielny skrypt importujący jest dostępny w pliku:
         return "OK"
 
 
-    # ============================================================
-    # GŁÓWNA FUNKCJA IMPORTU
-    # ============================================================
-
-    def importuj_csv_sqlite(sciezka_bazy=SCIEZKA_BAZY, sciezka_csv=SCIEZKA_CSV, separator=SEPARATOR):
+    def importuj_csv_sqlite(
+        sciezka_bazy=SCIEZKA_BAZY,
+        sciezka_csv=SCIEZKA_CSV,
+        separator=SEPARATOR,
+    ):
         conn = sqlite3.connect(sciezka_bazy)
         conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
-
         licznik_ok = 0
         licznik_bledow = 0
         bledy = []
@@ -1526,14 +1197,12 @@ Samodzielny skrypt importujący jest dostępny w pliku:
             for nr, row in enumerate(reader, start=2):
                 try:
                     wynik = importuj_wiersz(cursor, row)
-
                     if wynik == "OK":
                         conn.commit()
                         licznik_ok += 1
                     else:
                         conn.rollback()
                         print(f"Wiersz {nr}: {wynik}")
-
                 except Exception as blad:
                     conn.rollback()
                     licznik_bledow += 1
@@ -1555,11 +1224,8 @@ Samodzielny skrypt importujący jest dostępny w pliku:
                 print("-", blad)
 
 
-    # ============================================================
-    # URUCHOMIENIE
-    # ============================================================
-
-    importuj_csv_sqlite(SCIEZKA_BAZY, SCIEZKA_CSV, SEPARATOR)
+    if __name__ == "__main__":
+        importuj_csv_sqlite(SCIEZKA_BAZY, SCIEZKA_CSV, SEPARATOR)
 
 Komentarz do procesu wprowadzania danych
 ----------------------------------------

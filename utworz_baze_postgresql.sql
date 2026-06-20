@@ -27,19 +27,19 @@ CREATE TABLE Klienci (
 
 CREATE TABLE Kategorie (
     ID_Kategorii SERIAL PRIMARY KEY,
-    Nazwa_kategorii VARCHAR(50) NOT NULL
+    Nazwa_kategorii VARCHAR(50) UNIQUE NOT NULL
 );
 
 CREATE TABLE Producenci (
     ID_Producenta SERIAL PRIMARY KEY,
-    Nazwa_producenta VARCHAR(100) NOT NULL,
+    Nazwa_producenta VARCHAR(100) UNIQUE NOT NULL,
     Kraj_pochodzenia VARCHAR(50)
 );
 
 CREATE TABLE Kody_Rabatowe (
     ID_Kodu SERIAL PRIMARY KEY,
     Kod_tekstowy VARCHAR(20) UNIQUE NOT NULL,
-    Znizka_procentowa SMALLINT
+    Znizka_procentowa SMALLINT NOT NULL
         CHECK (Znizka_procentowa BETWEEN 0 AND 100)
 );
 
@@ -53,6 +53,9 @@ CREATE TABLE Produkty (
         CHECK (Cena_aktualna >= 0),
     Stan_magazynowy INTEGER NOT NULL DEFAULT 0
         CHECK (Stan_magazynowy >= 0),
+
+    CONSTRAINT uq_produkty_nazwa_producent
+        UNIQUE (Nazwa, ID_Producenta),
 
     CONSTRAINT fk_produkty_kategorie
         FOREIGN KEY (ID_Kategorii)
@@ -69,13 +72,17 @@ CREATE TABLE Zamowienia (
     ID_Zamowienia SERIAL PRIMARY KEY,
     ID_Klienta INTEGER NOT NULL,
     ID_Kodu INTEGER,
+    Znizka_zastosowana SMALLINT NOT NULL DEFAULT 0
+        CHECK (Znizka_zastosowana BETWEEN 0 AND 100),
     Data_zamowienia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    Status_zamowienia VARCHAR(30) NOT NULL,
+    Status_zamowienia VARCHAR(30) NOT NULL
+        CHECK (Status_zamowienia IN
+            ('Nowe', 'Opłacone', 'Wysłane', 'Dostarczone', 'Anulowane')),
 
     CONSTRAINT fk_zamowienia_klienci
         FOREIGN KEY (ID_Klienta)
         REFERENCES Klienci(ID_Klienta)
-        ON DELETE CASCADE,
+        ON DELETE RESTRICT,
 
     CONSTRAINT fk_zamowienia_kody
         FOREIGN KEY (ID_Kodu)
@@ -87,7 +94,9 @@ CREATE TABLE Platnosci (
     ID_Platnosci SERIAL PRIMARY KEY,
     ID_Zamowienia INTEGER UNIQUE NOT NULL,
     Metoda_platnosci VARCHAR(50) NOT NULL,
-    Status_platnosci VARCHAR(30) NOT NULL,
+    Status_platnosci VARCHAR(30) NOT NULL
+        CHECK (Status_platnosci IN
+            ('Oczekująca', 'Zakończona', 'Odrzucona')),
 
     CONSTRAINT fk_platnosci_zamowienia
         FOREIGN KEY (ID_Zamowienia)
@@ -112,7 +121,7 @@ CREATE TABLE Pozycje_Zamowienia (
     CONSTRAINT fk_pozycje_produkty
         FOREIGN KEY (ID_Produktu)
         REFERENCES Produkty(ID_Produktu)
-        ON DELETE CASCADE
+        ON DELETE RESTRICT
 );
 
 CREATE TABLE Wysylki (
@@ -120,7 +129,9 @@ CREATE TABLE Wysylki (
     ID_Zamowienia INTEGER UNIQUE NOT NULL,
     Firma_kurierska VARCHAR(100),
     Numer_listu VARCHAR(100) UNIQUE,
-    Status_paczki VARCHAR(50),
+    Status_paczki VARCHAR(50)
+        CHECK (Status_paczki IS NULL OR Status_paczki IN
+            ('Przygotowywana', 'Nadana', 'W transporcie', 'Doręczona', 'Zwrócona')),
 
     CONSTRAINT fk_wysylki_zamowienia
         FOREIGN KEY (ID_Zamowienia)

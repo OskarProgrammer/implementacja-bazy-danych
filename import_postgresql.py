@@ -1,6 +1,8 @@
 """Wsadowy import danych sklepu internetowego z CSV do PostgreSQL."""
 
 import csv
+from collections import OrderedDict
+from decimal import Decimal
 
 import simplejson
 from sqlalchemy import create_engine, text
@@ -9,6 +11,10 @@ from sqlalchemy import create_engine, text
 SCIEZKA_CSV = "dane_plaskie.csv"
 SEPARATOR = ";"
 SCIEZKA_CREDS = "./database_creds.json"
+
+STATUSY_ZAMOWIENIA = {"Nowe", "Opłacone", "Wysłane", "Dostarczone", "Anulowane"}
+STATUSY_PLATNOSCI = {"Oczekująca", "Zakończona", "Odrzucona"}
+STATUSY_PACZKI = {"Przygotowywana", "Nadana", "W transporcie", "Doręczona", "Zwrócona"}
 
 
 with open(SCIEZKA_CREDS, encoding="utf-8") as db_con_file:
@@ -139,6 +145,28 @@ def insert(connection, tabela, dane):
     connection.execute(text(polecenie), dane)
 
 
+def _porownywalna_wartosc(wartosc_do_porownania):
+    if isinstance(wartosc_do_porownania, (Decimal, float)):
+        return Decimal(str(wartosc_do_porownania))
+    return wartosc_do_porownania
+
+
+def sprawdz_zgodnosc(connection, tabela, kolumna_id, identyfikator, dane):
+    """Zgłasza błąd, gdy istniejący rekord ma inne dane niż w CSV."""
+    kolumny = ", ".join(k.lower() for k in dane)
+    rekord = connection.execute(text(f"""
+        SELECT {kolumny}
+        FROM {tabela.lower()}
+        WHERE {kolumna_id.lower()} = :identyfikator
+    """), {"identyfikator": identyfikator}).first()
+    if rekord is None:
+        return
+    zapisane = tuple(_porownywalna_wartosc(v) for v in rekord)
+    oczekiwane = tuple(_porownywalna_wartosc(v) for v in dane.values())
+    if zapisane != oczekiwane:
+        raise ValueError(f"Niespójne dane istniejącego rekordu w tabeli {tabela}")
+
+
 def importuj_wiersz(connection, row):
     if wartosc(row, "ID_Zamowienia") == "ID_Zamowienia":
         return "Pominięto powtórzony nagłówek"
@@ -156,6 +184,16 @@ def importuj_wiersz(connection, row):
     ):
         insert(connection, "Klienci", {
             "ID_Klienta": id_klienta,
+            "Imie": wartosc(row, "Imie"),
+            "Nazwisko": wartosc(row, "Nazwisko"),
+            "Email": wartosc(row, "Email"),
+            "Telefon": wartosc(row, "Telefon"),
+            "Miasto": wartosc(row, "Miasto"),
+            "Ulica": wartosc(row, "Ulica"),
+            "Kod_Pocztowy": wartosc(row, "Kod_Pocztowy"),
+        })
+    elif id_klienta is not None:
+        sprawdz_zgodnosc(connection, "Klienci", "ID_Klienta", id_klienta, {
             "Imie": wartosc(row, "Imie"),
             "Nazwisko": wartosc(row, "Nazwisko"),
             "Email": wartosc(row, "Email"),
@@ -199,6 +237,11 @@ def importuj_wiersz(connection, row):
         })
 
     id_kodu = liczba(row, "ID_Kodu")
+    znizka = liczba(row, "Znizka", 0) or 0
+    if not 0 <= znizka <= 100:
+        raise ValueError("Zniżka procentowa musi być w zakresie od 0 do 100")
+    if wartosc(row, "Kod_Rabatowy") is None and znizka != 0:
+        raise ValueError("Nie można zastosować zniżki bez kodu rabatowego")
     if id_kodu is None and wartosc(row, "Kod_Rabatowy") is not None:
         id_kodu = pobierz_id(
             connection, "Kody_Rabatowe", "ID_Kodu",
@@ -207,12 +250,14 @@ def importuj_wiersz(connection, row):
     if id_kodu is None and wartosc(row, "Kod_Rabatowy") is not None:
         id_kodu = next_id(connection, "Kody_Rabatowe", "ID_Kodu")
     if id_kodu is not None:
-        znizka = liczba(row, "Znizka")
-        if znizka is not None and not 0 <= znizka <= 100:
-            raise ValueError("Zniżka procentowa musi być w zakresie od 0 do 100")
         if not istnieje(connection, "Kody_Rabatowe", {"ID_Kodu": id_kodu}):
             insert(connection, "Kody_Rabatowe", {
                 "ID_Kodu": id_kodu,
+                "Kod_tekstowy": wartosc(row, "Kod_Rabatowy"),
+                "Znizka_procentowa": znizka,
+            })
+        else:
+            sprawdz_zgodnosc(connection, "Kody_Rabatowe", "ID_Kodu", id_kodu, {
                 "Kod_tekstowy": wartosc(row, "Kod_Rabatowy"),
                 "Znizka_procentowa": znizka,
             })
@@ -221,7 +266,10 @@ def importuj_wiersz(connection, row):
     if id_produktu is None and wartosc(row, "Nazwa_Produktu") is not None:
         id_produktu = pobierz_id(
             connection, "Produkty", "ID_Produktu",
-            {"Nazwa": wartosc(row, "Nazwa_Produktu")}
+            {
+                "Nazwa": wartosc(row, "Nazwa_Produktu"),
+                "ID_Producenta": id_producenta,
+            }
         )
     if id_produktu is None and wartosc(row, "Nazwa_Produktu") is not None:
         id_produktu = next_id(connection, "Produkty", "ID_Produktu")
@@ -244,6 +292,15 @@ def importuj_wiersz(connection, row):
                 "Cena_aktualna": cena,
                 "Stan_magazynowy": stan,
             })
+        else:
+            sprawdz_zgodnosc(connection, "Produkty", "ID_Produktu", id_produktu, {
+                "ID_Kategorii": id_kategorii,
+                "ID_Producenta": id_producenta,
+                "Nazwa": wartosc(row, "Nazwa_Produktu"),
+                "Opis": wartosc(row, "Opis"),
+                "Cena_aktualna": cena,
+                "Stan_magazynowy": stan,
+            })
 
     id_zamowienia = liczba(row, "ID_Zamowienia")
     if id_zamowienia is None:
@@ -253,16 +310,40 @@ def importuj_wiersz(connection, row):
         )
     if id_klienta is None:
         raise ValueError("Zamówienie nie ma klienta")
-    if not istnieje(connection, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
+    status_zamowienia = wartosc(row, "Status_Zamowienia")
+    if status_zamowienia not in STATUSY_ZAMOWIENIA:
+        raise ValueError(f"Niepoprawny status zamówienia: {status_zamowienia}")
+    data_zamowienia = wartosc(row, "Data_Zamowienia")
+    if data_zamowienia is None:
+        raise ValueError("Brak daty zamówienia")
+    istniejace_zamowienie = connection.execute(text("""
+        SELECT id_klienta, id_kodu, znizka_zastosowana,
+               CAST(data_zamowienia AS DATE)::text, status_zamowienia
+        FROM zamowienia WHERE id_zamowienia = :id_zamowienia
+    """), {"id_zamowienia": id_zamowienia}).first()
+    dane_zamowienia = (
+        id_klienta,
+        id_kodu,
+        znizka,
+        data_zamowienia[:10],
+        status_zamowienia,
+    )
+    if istniejace_zamowienie and tuple(istniejace_zamowienie) != dane_zamowienia:
+        raise ValueError("Niespójne dane w kolejnych wierszach tego samego zamówienia")
+    if not istniejace_zamowienie:
         insert(connection, "Zamowienia", {
             "ID_Zamowienia": id_zamowienia,
             "ID_Klienta": id_klienta,
             "ID_Kodu": id_kodu,
-            "Data_zamowienia": wartosc(row, "Data_Zamowienia"),
-            "Status_zamowienia": wartosc(row, "Status_Zamowienia"),
+            "Znizka_zastosowana": znizka,
+            "Data_zamowienia": data_zamowienia,
+            "Status_zamowienia": status_zamowienia,
         })
 
     if wartosc(row, "Metoda_Platnosci") is not None:
+        status_platnosci = wartosc(row, "Status_Platnosci")
+        if status_platnosci not in STATUSY_PLATNOSCI:
+            raise ValueError(f"Niepoprawny status płatności: {status_platnosci}")
         id_platnosci = liczba(row, "ID_Platnosci")
         if id_platnosci is None:
             id_platnosci = pobierz_id(
@@ -278,10 +359,19 @@ def importuj_wiersz(connection, row):
                 "ID_Platnosci": id_platnosci,
                 "ID_Zamowienia": id_zamowienia,
                 "Metoda_platnosci": wartosc(row, "Metoda_Platnosci"),
-                "Status_platnosci": wartosc(row, "Status_Platnosci"),
+                "Status_platnosci": status_platnosci,
+            })
+        else:
+            sprawdz_zgodnosc(connection, "Platnosci", "ID_Platnosci", id_platnosci, {
+                "ID_Zamowienia": id_zamowienia,
+                "Metoda_platnosci": wartosc(row, "Metoda_Platnosci"),
+                "Status_platnosci": status_platnosci,
             })
 
     if wartosc(row, "Firma_Kurierska") is not None:
+        status_paczki = wartosc(row, "Status_Paczki")
+        if status_paczki is not None and status_paczki not in STATUSY_PACZKI:
+            raise ValueError(f"Niepoprawny status paczki: {status_paczki}")
         id_wysylki = liczba(row, "ID_Wysylki")
         if id_wysylki is None:
             id_wysylki = pobierz_id(
@@ -298,7 +388,14 @@ def importuj_wiersz(connection, row):
                 "ID_Zamowienia": id_zamowienia,
                 "Firma_kurierska": wartosc(row, "Firma_Kurierska"),
                 "Numer_listu": wartosc(row, "Numer_Listu"),
-                "Status_paczki": wartosc(row, "Status_Paczki"),
+                "Status_paczki": status_paczki,
+            })
+        else:
+            sprawdz_zgodnosc(connection, "Wysylki", "ID_Wysylki", id_wysylki, {
+                "ID_Zamowienia": id_zamowienia,
+                "Firma_kurierska": wartosc(row, "Firma_Kurierska"),
+                "Numer_listu": wartosc(row, "Numer_Listu"),
+                "Status_paczki": status_paczki,
             })
 
     if id_produktu is not None and wartosc(row, "Ilosc_Zakupiona") is not None:
@@ -320,6 +417,8 @@ def importuj_wiersz(connection, row):
             })
 
     if wartosc(row, "Ocena_Produktu") is not None:
+        if status_zamowienia != "Dostarczone":
+            raise ValueError("Opinię można dodać tylko do dostarczonego zamówienia")
         warunek_opinii = {
             "ID_Zamowienia": id_zamowienia,
             "ID_Produktu": id_produktu,
@@ -356,21 +455,28 @@ def importuj_csv_postgres(sciezka_csv=SCIEZKA_CSV, separator=SEPARATOR):
 
     with open(sciezka_csv, newline="", encoding="utf-8") as plik:
         reader = csv.DictReader(plik, delimiter=separator)
+        zamowienia = OrderedDict()
+        for nr, row in enumerate(reader, start=2):
+            id_zamowienia = wartosc(row, "ID_Zamowienia")
+            if id_zamowienia == "ID_Zamowienia":
+                continue
+            zamowienia.setdefault(id_zamowienia, []).append((nr, row))
 
         with dbEngine.connect() as connection:
-            for nr, row in enumerate(reader, start=2):
+            for id_zamowienia, wiersze in zamowienia.items():
                 try:
-                    wynik = importuj_wiersz(connection, row)
-                    if wynik == "OK":
-                        connection.commit()
-                        licznik_ok += 1
-                    else:
-                        connection.rollback()
-                        print(f"Wiersz {nr}: {wynik}")
+                    for _, row in wiersze:
+                        importuj_wiersz(connection, row)
+                    connection.commit()
+                    licznik_ok += len(wiersze)
                 except Exception as blad:
                     connection.rollback()
-                    licznik_bledow += 1
-                    komunikat = f"Błąd w wierszu {nr}: {blad}"
+                    licznik_bledow += len(wiersze)
+                    numery = ", ".join(str(nr) for nr, _ in wiersze)
+                    komunikat = (
+                        f"Błąd zamówienia {id_zamowienia} "
+                        f"(wiersze {numery}): {blad}"
+                    )
                     bledy.append(komunikat)
                     print(komunikat)
 

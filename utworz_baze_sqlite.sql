@@ -29,19 +29,19 @@ CREATE TABLE Klienci (
 
 CREATE TABLE Kategorie (
     ID_Kategorii INTEGER PRIMARY KEY AUTOINCREMENT,
-    Nazwa_kategorii TEXT NOT NULL
+    Nazwa_kategorii TEXT UNIQUE NOT NULL
 );
 
 CREATE TABLE Producenci (
     ID_Producenta INTEGER PRIMARY KEY AUTOINCREMENT,
-    Nazwa_producenta TEXT NOT NULL,
+    Nazwa_producenta TEXT UNIQUE NOT NULL,
     Kraj_pochodzenia TEXT
 );
 
 CREATE TABLE Kody_Rabatowe (
     ID_Kodu INTEGER PRIMARY KEY AUTOINCREMENT,
     Kod_tekstowy TEXT UNIQUE NOT NULL,
-    Znizka_procentowa INTEGER
+    Znizka_procentowa INTEGER NOT NULL
         CHECK (Znizka_procentowa BETWEEN 0 AND 100)
 );
 
@@ -56,6 +56,8 @@ CREATE TABLE Produkty (
     Stan_magazynowy INTEGER NOT NULL DEFAULT 0
         CHECK (Stan_magazynowy >= 0),
 
+    UNIQUE (Nazwa, ID_Producenta),
+
     FOREIGN KEY (ID_Kategorii)
         REFERENCES Kategorie(ID_Kategorii)
         ON DELETE RESTRICT,
@@ -69,12 +71,16 @@ CREATE TABLE Zamowienia (
     ID_Zamowienia INTEGER PRIMARY KEY AUTOINCREMENT,
     ID_Klienta INTEGER NOT NULL,
     ID_Kodu INTEGER,
+    Znizka_zastosowana INTEGER NOT NULL DEFAULT 0
+        CHECK (Znizka_zastosowana BETWEEN 0 AND 100),
     Data_zamowienia DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    Status_zamowienia TEXT NOT NULL,
+    Status_zamowienia TEXT NOT NULL
+        CHECK (Status_zamowienia IN
+            ('Nowe', 'Opłacone', 'Wysłane', 'Dostarczone', 'Anulowane')),
 
     FOREIGN KEY (ID_Klienta)
         REFERENCES Klienci(ID_Klienta)
-        ON DELETE CASCADE,
+        ON DELETE RESTRICT,
 
     FOREIGN KEY (ID_Kodu)
         REFERENCES Kody_Rabatowe(ID_Kodu)
@@ -85,7 +91,9 @@ CREATE TABLE Platnosci (
     ID_Platnosci INTEGER PRIMARY KEY AUTOINCREMENT,
     ID_Zamowienia INTEGER UNIQUE NOT NULL,
     Metoda_platnosci TEXT NOT NULL,
-    Status_platnosci TEXT NOT NULL,
+    Status_platnosci TEXT NOT NULL
+        CHECK (Status_platnosci IN
+            ('Oczekująca', 'Zakończona', 'Odrzucona')),
 
     FOREIGN KEY (ID_Zamowienia)
         REFERENCES Zamowienia(ID_Zamowienia)
@@ -107,7 +115,7 @@ CREATE TABLE Pozycje_Zamowienia (
 
     FOREIGN KEY (ID_Produktu)
         REFERENCES Produkty(ID_Produktu)
-        ON DELETE CASCADE
+        ON DELETE RESTRICT
 );
 
 CREATE TABLE Wysylki (
@@ -115,7 +123,9 @@ CREATE TABLE Wysylki (
     ID_Zamowienia INTEGER UNIQUE NOT NULL,
     Firma_kurierska TEXT,
     Numer_listu TEXT UNIQUE,
-    Status_paczki TEXT,
+    Status_paczki TEXT
+        CHECK (Status_paczki IS NULL OR Status_paczki IN
+            ('Przygotowywana', 'Nadana', 'W transporcie', 'Doręczona', 'Zwrócona')),
 
     FOREIGN KEY (ID_Zamowienia)
         REFERENCES Zamowienia(ID_Zamowienia)

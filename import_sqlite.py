@@ -2,11 +2,16 @@
 
 import csv
 import sqlite3
+from collections import OrderedDict
 
 
 SCIEZKA_BAZY = "sklep.db"
 SCIEZKA_CSV = "dane_plaskie.csv"
 SEPARATOR = ";"
+
+STATUSY_ZAMOWIENIA = {"Nowe", "Opłacone", "Wysłane", "Dostarczone", "Anulowane"}
+STATUSY_PLATNOSCI = {"Oczekująca", "Zakończona", "Odrzucona"}
+STATUSY_PACZKI = {"Przygotowywana", "Nadana", "W transporcie", "Doręczona", "Zwrócona"}
 
 
 def puste(x):
@@ -79,6 +84,18 @@ def insert(cursor, tabela, dane):
     cursor.execute(polecenie, list(dane.values()))
 
 
+def sprawdz_zgodnosc(cursor, tabela, kolumna_id, identyfikator, dane):
+    """Zgłasza błąd, gdy istniejący rekord ma inne dane niż w CSV."""
+    kolumny = ", ".join(f'"{kolumna}"' for kolumna in dane)
+    cursor.execute(
+        f'SELECT {kolumny} FROM "{tabela}" WHERE "{kolumna_id}" = ?',
+        (identyfikator,),
+    )
+    rekord = cursor.fetchone()
+    if rekord is not None and tuple(rekord) != tuple(dane.values()):
+        raise ValueError(f"Niespójne dane istniejącego rekordu w tabeli {tabela}")
+
+
 def importuj_wiersz(cursor, row):
     if wartosc(row, "ID_Zamowienia") == "ID_Zamowienia":
         return "Pominięto powtórzony nagłówek"
@@ -96,6 +113,16 @@ def importuj_wiersz(cursor, row):
     ):
         insert(cursor, "Klienci", {
             "ID_Klienta": id_klienta,
+            "Imie": wartosc(row, "Imie"),
+            "Nazwisko": wartosc(row, "Nazwisko"),
+            "Email": wartosc(row, "Email"),
+            "Telefon": wartosc(row, "Telefon"),
+            "Miasto": wartosc(row, "Miasto"),
+            "Ulica": wartosc(row, "Ulica"),
+            "Kod_Pocztowy": wartosc(row, "Kod_Pocztowy"),
+        })
+    elif id_klienta is not None:
+        sprawdz_zgodnosc(cursor, "Klienci", "ID_Klienta", id_klienta, {
             "Imie": wartosc(row, "Imie"),
             "Nazwisko": wartosc(row, "Nazwisko"),
             "Email": wartosc(row, "Email"),
@@ -139,6 +166,11 @@ def importuj_wiersz(cursor, row):
         })
 
     id_kodu = liczba(row, "ID_Kodu")
+    znizka = liczba(row, "Znizka", 0) or 0
+    if not 0 <= znizka <= 100:
+        raise ValueError("Zniżka procentowa musi być w zakresie od 0 do 100")
+    if wartosc(row, "Kod_Rabatowy") is None and znizka != 0:
+        raise ValueError("Nie można zastosować zniżki bez kodu rabatowego")
     if id_kodu is None and wartosc(row, "Kod_Rabatowy") is not None:
         id_kodu = pobierz_id(
             cursor, "Kody_Rabatowe", "ID_Kodu",
@@ -147,12 +179,14 @@ def importuj_wiersz(cursor, row):
     if id_kodu is None and wartosc(row, "Kod_Rabatowy") is not None:
         id_kodu = next_id(cursor, "Kody_Rabatowe", "ID_Kodu")
     if id_kodu is not None:
-        znizka = liczba(row, "Znizka")
-        if znizka is not None and not 0 <= znizka <= 100:
-            raise ValueError("Zniżka procentowa musi być w zakresie od 0 do 100")
         if not istnieje(cursor, "Kody_Rabatowe", {"ID_Kodu": id_kodu}):
             insert(cursor, "Kody_Rabatowe", {
                 "ID_Kodu": id_kodu,
+                "Kod_tekstowy": wartosc(row, "Kod_Rabatowy"),
+                "Znizka_procentowa": znizka,
+            })
+        else:
+            sprawdz_zgodnosc(cursor, "Kody_Rabatowe", "ID_Kodu", id_kodu, {
                 "Kod_tekstowy": wartosc(row, "Kod_Rabatowy"),
                 "Znizka_procentowa": znizka,
             })
@@ -161,7 +195,10 @@ def importuj_wiersz(cursor, row):
     if id_produktu is None and wartosc(row, "Nazwa_Produktu") is not None:
         id_produktu = pobierz_id(
             cursor, "Produkty", "ID_Produktu",
-            {"Nazwa": wartosc(row, "Nazwa_Produktu")}
+            {
+                "Nazwa": wartosc(row, "Nazwa_Produktu"),
+                "ID_Producenta": id_producenta,
+            }
         )
     if id_produktu is None and wartosc(row, "Nazwa_Produktu") is not None:
         id_produktu = next_id(cursor, "Produkty", "ID_Produktu")
@@ -184,6 +221,15 @@ def importuj_wiersz(cursor, row):
                 "Cena_aktualna": cena,
                 "Stan_magazynowy": stan,
             })
+        else:
+            sprawdz_zgodnosc(cursor, "Produkty", "ID_Produktu", id_produktu, {
+                "ID_Kategorii": id_kategorii,
+                "ID_Producenta": id_producenta,
+                "Nazwa": wartosc(row, "Nazwa_Produktu"),
+                "Opis": wartosc(row, "Opis"),
+                "Cena_aktualna": cena,
+                "Stan_magazynowy": stan,
+            })
 
     id_zamowienia = liczba(row, "ID_Zamowienia")
     if id_zamowienia is None:
@@ -193,16 +239,44 @@ def importuj_wiersz(cursor, row):
         )
     if id_klienta is None:
         raise ValueError("Zamówienie nie ma klienta")
-    if not istnieje(cursor, "Zamowienia", {"ID_Zamowienia": id_zamowienia}):
+    status_zamowienia = wartosc(row, "Status_Zamowienia")
+    if status_zamowienia not in STATUSY_ZAMOWIENIA:
+        raise ValueError(f"Niepoprawny status zamówienia: {status_zamowienia}")
+    data_zamowienia = wartosc(row, "Data_Zamowienia")
+    if data_zamowienia is None:
+        raise ValueError("Brak daty zamówienia")
+    cursor.execute(
+        """
+        SELECT ID_Klienta, ID_Kodu, Znizka_zastosowana,
+               substr(Data_zamowienia, 1, 10), Status_zamowienia
+        FROM Zamowienia WHERE ID_Zamowienia = ?
+        """,
+        (id_zamowienia,),
+    )
+    istniejace_zamowienie = cursor.fetchone()
+    dane_zamowienia = (
+        id_klienta,
+        id_kodu,
+        znizka,
+        data_zamowienia[:10],
+        status_zamowienia,
+    )
+    if istniejace_zamowienie and tuple(istniejace_zamowienie) != dane_zamowienia:
+        raise ValueError("Niespójne dane w kolejnych wierszach tego samego zamówienia")
+    if not istniejace_zamowienie:
         insert(cursor, "Zamowienia", {
             "ID_Zamowienia": id_zamowienia,
             "ID_Klienta": id_klienta,
             "ID_Kodu": id_kodu,
-            "Data_zamowienia": wartosc(row, "Data_Zamowienia"),
-            "Status_zamowienia": wartosc(row, "Status_Zamowienia"),
+            "Znizka_zastosowana": znizka,
+            "Data_zamowienia": data_zamowienia,
+            "Status_zamowienia": status_zamowienia,
         })
 
     if wartosc(row, "Metoda_Platnosci") is not None:
+        status_platnosci = wartosc(row, "Status_Platnosci")
+        if status_platnosci not in STATUSY_PLATNOSCI:
+            raise ValueError(f"Niepoprawny status płatności: {status_platnosci}")
         id_platnosci = liczba(row, "ID_Platnosci")
         if id_platnosci is None:
             id_platnosci = pobierz_id(
@@ -216,10 +290,19 @@ def importuj_wiersz(cursor, row):
                 "ID_Platnosci": id_platnosci,
                 "ID_Zamowienia": id_zamowienia,
                 "Metoda_platnosci": wartosc(row, "Metoda_Platnosci"),
-                "Status_platnosci": wartosc(row, "Status_Platnosci"),
+                "Status_platnosci": status_platnosci,
+            })
+        else:
+            sprawdz_zgodnosc(cursor, "Platnosci", "ID_Platnosci", id_platnosci, {
+                "ID_Zamowienia": id_zamowienia,
+                "Metoda_platnosci": wartosc(row, "Metoda_Platnosci"),
+                "Status_platnosci": status_platnosci,
             })
 
     if wartosc(row, "Firma_Kurierska") is not None:
+        status_paczki = wartosc(row, "Status_Paczki")
+        if status_paczki is not None and status_paczki not in STATUSY_PACZKI:
+            raise ValueError(f"Niepoprawny status paczki: {status_paczki}")
         id_wysylki = liczba(row, "ID_Wysylki")
         if id_wysylki is None:
             id_wysylki = pobierz_id(
@@ -234,7 +317,14 @@ def importuj_wiersz(cursor, row):
                 "ID_Zamowienia": id_zamowienia,
                 "Firma_kurierska": wartosc(row, "Firma_Kurierska"),
                 "Numer_listu": wartosc(row, "Numer_Listu"),
-                "Status_paczki": wartosc(row, "Status_Paczki"),
+                "Status_paczki": status_paczki,
+            })
+        else:
+            sprawdz_zgodnosc(cursor, "Wysylki", "ID_Wysylki", id_wysylki, {
+                "ID_Zamowienia": id_zamowienia,
+                "Firma_kurierska": wartosc(row, "Firma_Kurierska"),
+                "Numer_listu": wartosc(row, "Numer_Listu"),
+                "Status_paczki": status_paczki,
             })
 
     if id_produktu is not None and wartosc(row, "Ilosc_Zakupiona") is not None:
@@ -256,6 +346,8 @@ def importuj_wiersz(cursor, row):
             })
 
     if wartosc(row, "Ocena_Produktu") is not None:
+        if status_zamowienia != "Dostarczone":
+            raise ValueError("Opinię można dodać tylko do dostarczonego zamówienia")
         warunek_opinii = {
             "ID_Zamowienia": id_zamowienia,
             "ID_Produktu": id_produktu,
@@ -297,20 +389,27 @@ def importuj_csv_sqlite(
 
     with open(sciezka_csv, newline="", encoding="utf-8") as plik:
         reader = csv.DictReader(plik, delimiter=separator)
-
+        zamowienia = OrderedDict()
         for nr, row in enumerate(reader, start=2):
+            id_zamowienia = wartosc(row, "ID_Zamowienia")
+            if id_zamowienia == "ID_Zamowienia":
+                continue
+            zamowienia.setdefault(id_zamowienia, []).append((nr, row))
+
+        for id_zamowienia, wiersze in zamowienia.items():
             try:
-                wynik = importuj_wiersz(cursor, row)
-                if wynik == "OK":
-                    conn.commit()
-                    licznik_ok += 1
-                else:
-                    conn.rollback()
-                    print(f"Wiersz {nr}: {wynik}")
+                for _, row in wiersze:
+                    importuj_wiersz(cursor, row)
+                conn.commit()
+                licznik_ok += len(wiersze)
             except Exception as blad:
                 conn.rollback()
-                licznik_bledow += 1
-                komunikat = f"Błąd w wierszu {nr}: {blad}"
+                licznik_bledow += len(wiersze)
+                numery = ", ".join(str(nr) for nr, _ in wiersze)
+                komunikat = (
+                    f"Błąd zamówienia {id_zamowienia} "
+                    f"(wiersze {numery}): {blad}"
+                )
                 bledy.append(komunikat)
                 print(komunikat)
 

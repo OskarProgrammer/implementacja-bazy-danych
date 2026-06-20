@@ -167,9 +167,49 @@ def sprawdz_zgodnosc(connection, tabela, kolumna_id, identyfikator, dane):
         raise ValueError(f"Niespójne dane istniejącego rekordu w tabeli {tabela}")
 
 
+def sprawdz_zgodnosc_warunku(connection, tabela, warunek, dane):
+    """Zgłasza błąd, gdy rekord wskazany warunkiem ma inne dane niż w CSV."""
+    kolumny = ", ".join(k.lower() for k in dane)
+    warunki = " AND ".join(f"{k.lower()} = :{k}" for k in warunek)
+    rekord = connection.execute(text(f"""
+        SELECT {kolumny}
+        FROM {tabela.lower()}
+        WHERE {warunki}
+    """), warunek).first()
+    if rekord is None:
+        return
+    zapisane = tuple(_porownywalna_wartosc(v) for v in rekord)
+    oczekiwane = tuple(_porownywalna_wartosc(v) for v in dane.values())
+    if zapisane != oczekiwane:
+        raise ValueError(f"Niespójne dane istniejącego rekordu w tabeli {tabela}")
+
+
 def importuj_wiersz(connection, row):
     if wartosc(row, "ID_Zamowienia") == "ID_Zamowienia":
         return "Pominięto powtórzony nagłówek"
+
+    if (
+        liczba(row, "ID_Produktu") is None
+        and wartosc(row, "Nazwa_Produktu") is None
+    ):
+        raise ValueError("Każdy wiersz zamówienia musi wskazywać produkt")
+    if wartosc(row, "Ilosc_Zakupiona") is None:
+        raise ValueError("Każdy wiersz zamówienia musi zawierać ilość produktu")
+    if wartosc(row, "Cena_Historyczna") is None:
+        raise ValueError(
+            "Każdy wiersz zamówienia musi zawierać cenę historyczną produktu"
+        )
+
+    pola_platnosci = (
+        wartosc(row, "ID_Platnosci"),
+        wartosc(row, "Metoda_Platnosci"),
+        wartosc(row, "Status_Platnosci"),
+    )
+    if any(pole is not None for pole in pola_platnosci):
+        if wartosc(row, "Metoda_Platnosci") is None:
+            raise ValueError("Płatność musi zawierać metodę płatności")
+        if wartosc(row, "Status_Platnosci") is None:
+            raise ValueError("Płatność musi zawierać status płatności")
 
     id_klienta = liczba(row, "ID_Klienta")
     if id_klienta is None and wartosc(row, "Email") is not None:
@@ -368,7 +408,13 @@ def importuj_wiersz(connection, row):
                 "Status_platnosci": status_platnosci,
             })
 
-    if wartosc(row, "Firma_Kurierska") is not None:
+    pola_wysylki = (
+        wartosc(row, "ID_Wysylki"),
+        wartosc(row, "Firma_Kurierska"),
+        wartosc(row, "Numer_Listu"),
+        wartosc(row, "Status_Paczki"),
+    )
+    if any(pole is not None for pole in pola_wysylki):
         status_paczki = wartosc(row, "Status_Paczki")
         if status_paczki is not None and status_paczki not in STATUSY_PACZKI:
             raise ValueError(f"Niepoprawny status paczki: {status_paczki}")
@@ -415,6 +461,16 @@ def importuj_wiersz(connection, row):
                 "Ilosc": ilosc,
                 "Cena_historyczna": cena_historyczna,
             })
+        else:
+            sprawdz_zgodnosc_warunku(
+                connection,
+                "Pozycje_Zamowienia",
+                warunek_pozycji,
+                {
+                    "Ilosc": ilosc,
+                    "Cena_historyczna": cena_historyczna,
+                },
+            )
 
     if wartosc(row, "Ocena_Produktu") is not None:
         if status_zamowienia != "Dostarczone":

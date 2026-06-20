@@ -816,14 +816,6 @@ ALTER TABLE ONLY public.zamowienia
 
 
 --
--- TOC entry 3380 (class 1259 OID 41774)
--- Name: idx_platnosci_zamowienie; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_platnosci_zamowienie ON public.platnosci USING btree (id_zamowienia);
-
-
---
 -- TOC entry 3385 (class 1259 OID 41773)
 -- Name: idx_pozycje_produkt; Type: INDEX; Schema: public; Owner: -
 --
@@ -845,14 +837,6 @@ CREATE INDEX idx_produkty_kategoria ON public.produkty USING btree (id_kategorii
 --
 
 CREATE INDEX idx_produkty_producent ON public.produkty USING btree (id_producenta);
-
-
---
--- TOC entry 3388 (class 1259 OID 41775)
--- Name: idx_wysylki_zamowienie; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_wysylki_zamowienie ON public.wysylki USING btree (id_zamowienia);
 
 
 --
@@ -951,4 +935,3 @@ ALTER TABLE ONLY public.zamowienia
 --
 
 \unrestrict 6aBQwABrCT133TxImnK2H8cagQUhLFGatftSUIrsriNSQxGDsFazjq6eihrYiNO
-

@@ -166,9 +166,3 @@ ON Zamowienia(ID_Klienta);
 
 CREATE INDEX idx_pozycje_produkt
 ON Pozycje_Zamowienia(ID_Produktu);
-
-CREATE INDEX idx_platnosci_zamowienie
-ON Platnosci(ID_Zamowienia);
-
-CREATE INDEX idx_wysylki_zamowienie
-ON Wysylki(ID_Zamowienia);

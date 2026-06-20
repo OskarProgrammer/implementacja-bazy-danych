@@ -142,13 +142,16 @@ wierszy, co ułatwia odnalezienie niepoprawnych wartości w pliku źródłowym.
 
 Skrypt sprawdza między innymi zakres zniżki i oceny, dodatnią liczbę sztuk,
 nieujemne ceny i stany magazynowe oraz istnienie rekordów wskazywanych przez
-klucze obce. Płatność i wysyłka są identyfikowane na podstawie zamówienia,
+klucze obce. Każdy wiersz musi opisywać kompletną pozycję zamówienia, a podanie
+któregokolwiek pola płatności wymaga również metody i statusu. Płatność i wysyłka
+są identyfikowane na podstawie zamówienia,
 a opinia na podstawie pary: zamówienie i produkt. Zapobiega to tworzeniu
 duplikatów podczas importu kolejnych pozycji należących do tej samej transakcji.
 Opinia może zostać dodana wyłącznie do zamówienia o statusie ``Dostarczone``.
 Produkt jest wyszukiwany na podstawie nazwy i producenta, a kolejne wystąpienia
 klienta, produktu, kodu, płatności, wysyłki i zamówienia są porównywane z już
-zapisanymi danymi. Sprzeczne wartości powodują wycofanie całej transakcji.
+zapisanymi danymi. Porównywane są także ilość i cena historyczna powtórzonej
+pozycji zamówienia. Sprzeczne wartości powodują wycofanie całej transakcji.
 Importer kontroluje również słowniki statusów oraz zapisuje w zamówieniu
 historyczną wartość zastosowanego rabatu. Pole ``Stan_magazynowy`` jest w tym
 ćwiczeniu importowanym stanem danych, a nie mechanizmem realizacji magazynowej;

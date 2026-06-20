@@ -7,7 +7,7 @@ Implementacja Bazy Danych
     2. Kamil Lewandowski
     3. Adam Tarkowski
 
-1. Implementacja fizycznych schematów
+Implementacja fizycznych schematów
 =====================================
 
 Schemat bazy zaimplementowano w dwóch wariantach: dla PostgreSQL oraz SQLite.
@@ -19,13 +19,13 @@ i sposobu automatycznego generowania identyfikatorów.
    :align: center
    :alt: Model fizyczny ERD dla PostgreSQL
 
-   Rysunek 1: Fizyczny schemat bazy danych opracowany dla silnika PostgreSQL.
+   Fizyczny schemat bazy danych opracowany dla silnika PostgreSQL.
 
 .. figure:: schemat_fizyczny_sqlite.png
    :align: center
    :alt: Model fizyczny ERD dla SQLite
 
-   Rysunek 2: Fizyczny schemat bazy danych opracowany dla silnika SQLite.
+   Fizyczny schemat bazy danych opracowany dla silnika SQLite.
 
 Kod SQL dla PostgreSQL
 ----------------------
@@ -43,7 +43,7 @@ Reprezentacja bazy danych w pgadmin na zdalnym serwerze:
    :align: center
    :alt: Zrzut ekranu z pgAdmin przedstawiający strukturę bazy danych
 
-   Rysunek 3: Lista tabel utworzonych na zdalnym serwerze PostgreSQL w pgAdmin.
+   Lista tabel utworzonych na zdalnym serwerze PostgreSQL w pgAdmin.
 
 Reprezentacja bazy danych w psql na lokalnym serwerze:
 
@@ -51,7 +51,7 @@ Reprezentacja bazy danych w psql na lokalnym serwerze:
    :align: center
    :alt: Lista relacji bazy danych wyświetlona w programie psql
 
-   Rysunek 4: Lista relacji bazy danych wyświetlona lokalnie w programie psql.
+   Lista relacji bazy danych wyświetlona lokalnie w programie psql.
 
 Kod SQL dla SQLite
 ------------------
@@ -69,10 +69,10 @@ Reprezentacja bazy danych w sqlite:
    :align: center
    :alt: Zrzut ekranu reprezentacji sqlite z jupyterhub
 
-   Rysunek 5: Lista tabel utworzonych w bazie SQLite w środowisku JupyterHub.
+   Lista tabel utworzonych w bazie SQLite w środowisku JupyterHub.
 
 
-2. Skrypt do wprowadzania danych do bazy danych
+Skrypt do wprowadzania danych do bazy danych
 ===============================================
 
 Wybór mechanizmu importu

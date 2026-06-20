@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict 6aBQwABrCT133TxImnK2H8cagQUhLFGatftSUIrsriNSQxGDsFazjq6eihrYiNO
+\restrict tL15aTvr1K5F5PJf0Cgwd1tdEQK3VBFrZuQqNM1dIddKMGTSkGgkxXfNGGynH75
 
 -- Dumped from database version 18.4 (Debian 18.4-1.pgdg13+1)
 -- Dumped by pg_dump version 18.4 (Debian 18.4-1.pgdg13+1)
 
--- Started on 2026-06-20 09:53:21 CEST
+-- Started on 2026-06-20 10:33:11 CEST
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -24,7 +24,7 @@ SET row_security = off;
 SET default_table_access_method = heap;
 
 --
--- TOC entry 222 (class 1259 OID 41600)
+-- TOC entry 222 (class 1259 OID 41793)
 -- Name: kategorie; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -35,7 +35,7 @@ CREATE TABLE public.kategorie (
 
 
 --
--- TOC entry 221 (class 1259 OID 41599)
+-- TOC entry 221 (class 1259 OID 41792)
 -- Name: kategorie_id_kategorii_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -49,7 +49,7 @@ CREATE SEQUENCE public.kategorie_id_kategorii_seq
 
 
 --
--- TOC entry 3579 (class 0 OID 0)
+-- TOC entry 3577 (class 0 OID 0)
 -- Dependencies: 221
 -- Name: kategorie_id_kategorii_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
@@ -58,7 +58,7 @@ ALTER SEQUENCE public.kategorie_id_kategorii_seq OWNED BY public.kategorie.id_ka
 
 
 --
--- TOC entry 220 (class 1259 OID 41585)
+-- TOC entry 220 (class 1259 OID 41778)
 -- Name: klienci; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -75,7 +75,7 @@ CREATE TABLE public.klienci (
 
 
 --
--- TOC entry 219 (class 1259 OID 41584)
+-- TOC entry 219 (class 1259 OID 41777)
 -- Name: klienci_id_klienta_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -89,7 +89,7 @@ CREATE SEQUENCE public.klienci_id_klienta_seq
 
 
 --
--- TOC entry 3580 (class 0 OID 0)
+-- TOC entry 3578 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: klienci_id_klienta_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
@@ -98,7 +98,7 @@ ALTER SEQUENCE public.klienci_id_klienta_seq OWNED BY public.klienci.id_klienta;
 
 
 --
--- TOC entry 226 (class 1259 OID 41622)
+-- TOC entry 226 (class 1259 OID 41815)
 -- Name: kody_rabatowe; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -111,7 +111,7 @@ CREATE TABLE public.kody_rabatowe (
 
 
 --
--- TOC entry 225 (class 1259 OID 41621)
+-- TOC entry 225 (class 1259 OID 41814)
 -- Name: kody_rabatowe_id_kodu_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -125,7 +125,7 @@ CREATE SEQUENCE public.kody_rabatowe_id_kodu_seq
 
 
 --
--- TOC entry 3581 (class 0 OID 0)
+-- TOC entry 3579 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: kody_rabatowe_id_kodu_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
@@ -134,7 +134,7 @@ ALTER SEQUENCE public.kody_rabatowe_id_kodu_seq OWNED BY public.kody_rabatowe.id
 
 
 --
--- TOC entry 237 (class 1259 OID 41750)
+-- TOC entry 237 (class 1259 OID 41943)
 -- Name: opinie; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -149,7 +149,7 @@ CREATE TABLE public.opinie (
 
 
 --
--- TOC entry 236 (class 1259 OID 41749)
+-- TOC entry 236 (class 1259 OID 41942)
 -- Name: opinie_id_opinii_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -163,7 +163,7 @@ CREATE SEQUENCE public.opinie_id_opinii_seq
 
 
 --
--- TOC entry 3582 (class 0 OID 0)
+-- TOC entry 3580 (class 0 OID 0)
 -- Dependencies: 236
 -- Name: opinie_id_opinii_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
@@ -172,7 +172,7 @@ ALTER SEQUENCE public.opinie_id_opinii_seq OWNED BY public.opinie.id_opinii;
 
 
 --
--- TOC entry 232 (class 1259 OID 41691)
+-- TOC entry 232 (class 1259 OID 41884)
 -- Name: platnosci; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -186,7 +186,7 @@ CREATE TABLE public.platnosci (
 
 
 --
--- TOC entry 231 (class 1259 OID 41690)
+-- TOC entry 231 (class 1259 OID 41883)
 -- Name: platnosci_id_platnosci_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -200,7 +200,7 @@ CREATE SEQUENCE public.platnosci_id_platnosci_seq
 
 
 --
--- TOC entry 3583 (class 0 OID 0)
+-- TOC entry 3581 (class 0 OID 0)
 -- Dependencies: 231
 -- Name: platnosci_id_platnosci_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
@@ -209,7 +209,7 @@ ALTER SEQUENCE public.platnosci_id_platnosci_seq OWNED BY public.platnosci.id_pl
 
 
 --
--- TOC entry 233 (class 1259 OID 41709)
+-- TOC entry 233 (class 1259 OID 41902)
 -- Name: pozycje_zamowienia; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -224,7 +224,7 @@ CREATE TABLE public.pozycje_zamowienia (
 
 
 --
--- TOC entry 224 (class 1259 OID 41611)
+-- TOC entry 224 (class 1259 OID 41804)
 -- Name: producenci; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -236,7 +236,7 @@ CREATE TABLE public.producenci (
 
 
 --
--- TOC entry 223 (class 1259 OID 41610)
+-- TOC entry 223 (class 1259 OID 41803)
 -- Name: producenci_id_producenta_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -250,7 +250,7 @@ CREATE SEQUENCE public.producenci_id_producenta_seq
 
 
 --
--- TOC entry 3584 (class 0 OID 0)
+-- TOC entry 3582 (class 0 OID 0)
 -- Dependencies: 223
 -- Name: producenci_id_producenta_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
@@ -259,7 +259,7 @@ ALTER SEQUENCE public.producenci_id_producenta_seq OWNED BY public.producenci.id
 
 
 --
--- TOC entry 228 (class 1259 OID 41635)
+-- TOC entry 228 (class 1259 OID 41828)
 -- Name: produkty; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -277,7 +277,7 @@ CREATE TABLE public.produkty (
 
 
 --
--- TOC entry 227 (class 1259 OID 41634)
+-- TOC entry 227 (class 1259 OID 41827)
 -- Name: produkty_id_produktu_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -291,7 +291,7 @@ CREATE SEQUENCE public.produkty_id_produktu_seq
 
 
 --
--- TOC entry 3585 (class 0 OID 0)
+-- TOC entry 3583 (class 0 OID 0)
 -- Dependencies: 227
 -- Name: produkty_id_produktu_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
@@ -300,7 +300,7 @@ ALTER SEQUENCE public.produkty_id_produktu_seq OWNED BY public.produkty.id_produ
 
 
 --
--- TOC entry 235 (class 1259 OID 41731)
+-- TOC entry 235 (class 1259 OID 41924)
 -- Name: wysylki; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -315,7 +315,7 @@ CREATE TABLE public.wysylki (
 
 
 --
--- TOC entry 234 (class 1259 OID 41730)
+-- TOC entry 234 (class 1259 OID 41923)
 -- Name: wysylki_id_wysylki_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -329,7 +329,7 @@ CREATE SEQUENCE public.wysylki_id_wysylki_seq
 
 
 --
--- TOC entry 3586 (class 0 OID 0)
+-- TOC entry 3584 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: wysylki_id_wysylki_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
@@ -338,7 +338,7 @@ ALTER SEQUENCE public.wysylki_id_wysylki_seq OWNED BY public.wysylki.id_wysylki;
 
 
 --
--- TOC entry 230 (class 1259 OID 41665)
+-- TOC entry 230 (class 1259 OID 41858)
 -- Name: zamowienia; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -355,7 +355,7 @@ CREATE TABLE public.zamowienia (
 
 
 --
--- TOC entry 229 (class 1259 OID 41664)
+-- TOC entry 229 (class 1259 OID 41857)
 -- Name: zamowienia_id_zamowienia_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -369,7 +369,7 @@ CREATE SEQUENCE public.zamowienia_id_zamowienia_seq
 
 
 --
--- TOC entry 3587 (class 0 OID 0)
+-- TOC entry 3585 (class 0 OID 0)
 -- Dependencies: 229
 -- Name: zamowienia_id_zamowienia_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
@@ -378,7 +378,7 @@ ALTER SEQUENCE public.zamowienia_id_zamowienia_seq OWNED BY public.zamowienia.id
 
 
 --
--- TOC entry 3334 (class 2604 OID 41603)
+-- TOC entry 3334 (class 2604 OID 41796)
 -- Name: kategorie id_kategorii; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -386,7 +386,7 @@ ALTER TABLE ONLY public.kategorie ALTER COLUMN id_kategorii SET DEFAULT nextval(
 
 
 --
--- TOC entry 3333 (class 2604 OID 41588)
+-- TOC entry 3333 (class 2604 OID 41781)
 -- Name: klienci id_klienta; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -394,7 +394,7 @@ ALTER TABLE ONLY public.klienci ALTER COLUMN id_klienta SET DEFAULT nextval('pub
 
 
 --
--- TOC entry 3336 (class 2604 OID 41625)
+-- TOC entry 3336 (class 2604 OID 41818)
 -- Name: kody_rabatowe id_kodu; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -402,7 +402,7 @@ ALTER TABLE ONLY public.kody_rabatowe ALTER COLUMN id_kodu SET DEFAULT nextval('
 
 
 --
--- TOC entry 3344 (class 2604 OID 41753)
+-- TOC entry 3344 (class 2604 OID 41946)
 -- Name: opinie id_opinii; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -410,7 +410,7 @@ ALTER TABLE ONLY public.opinie ALTER COLUMN id_opinii SET DEFAULT nextval('publi
 
 
 --
--- TOC entry 3342 (class 2604 OID 41694)
+-- TOC entry 3342 (class 2604 OID 41887)
 -- Name: platnosci id_platnosci; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -418,7 +418,7 @@ ALTER TABLE ONLY public.platnosci ALTER COLUMN id_platnosci SET DEFAULT nextval(
 
 
 --
--- TOC entry 3335 (class 2604 OID 41614)
+-- TOC entry 3335 (class 2604 OID 41807)
 -- Name: producenci id_producenta; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -426,7 +426,7 @@ ALTER TABLE ONLY public.producenci ALTER COLUMN id_producenta SET DEFAULT nextva
 
 
 --
--- TOC entry 3337 (class 2604 OID 41638)
+-- TOC entry 3337 (class 2604 OID 41831)
 -- Name: produkty id_produktu; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -434,7 +434,7 @@ ALTER TABLE ONLY public.produkty ALTER COLUMN id_produktu SET DEFAULT nextval('p
 
 
 --
--- TOC entry 3343 (class 2604 OID 41734)
+-- TOC entry 3343 (class 2604 OID 41927)
 -- Name: wysylki id_wysylki; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -442,7 +442,7 @@ ALTER TABLE ONLY public.wysylki ALTER COLUMN id_wysylki SET DEFAULT nextval('pub
 
 
 --
--- TOC entry 3339 (class 2604 OID 41668)
+-- TOC entry 3339 (class 2604 OID 41861)
 -- Name: zamowienia id_zamowienia; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -450,7 +450,7 @@ ALTER TABLE ONLY public.zamowienia ALTER COLUMN id_zamowienia SET DEFAULT nextva
 
 
 --
--- TOC entry 3558 (class 0 OID 41600)
+-- TOC entry 3556 (class 0 OID 41793)
 -- Dependencies: 222
 -- Data for Name: kategorie; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -461,7 +461,7 @@ COPY public.kategorie (id_kategorii, nazwa_kategorii) FROM stdin;
 
 
 --
--- TOC entry 3556 (class 0 OID 41585)
+-- TOC entry 3554 (class 0 OID 41778)
 -- Dependencies: 220
 -- Data for Name: klienci; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -472,7 +472,7 @@ COPY public.klienci (id_klienta, imie, nazwisko, email, telefon, miasto, ulica, 
 
 
 --
--- TOC entry 3562 (class 0 OID 41622)
+-- TOC entry 3560 (class 0 OID 41815)
 -- Dependencies: 226
 -- Data for Name: kody_rabatowe; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -483,7 +483,7 @@ COPY public.kody_rabatowe (id_kodu, kod_tekstowy, znizka_procentowa) FROM stdin;
 
 
 --
--- TOC entry 3573 (class 0 OID 41750)
+-- TOC entry 3571 (class 0 OID 41943)
 -- Dependencies: 237
 -- Data for Name: opinie; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -495,7 +495,7 @@ COPY public.opinie (id_opinii, id_zamowienia, id_produktu, ocena, komentarz) FRO
 
 
 --
--- TOC entry 3568 (class 0 OID 41691)
+-- TOC entry 3566 (class 0 OID 41884)
 -- Dependencies: 232
 -- Data for Name: platnosci; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -506,7 +506,7 @@ COPY public.platnosci (id_platnosci, id_zamowienia, metoda_platnosci, status_pla
 
 
 --
--- TOC entry 3569 (class 0 OID 41709)
+-- TOC entry 3567 (class 0 OID 41902)
 -- Dependencies: 233
 -- Data for Name: pozycje_zamowienia; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -518,7 +518,7 @@ COPY public.pozycje_zamowienia (id_zamowienia, id_produktu, ilosc, cena_historyc
 
 
 --
--- TOC entry 3560 (class 0 OID 41611)
+-- TOC entry 3558 (class 0 OID 41804)
 -- Dependencies: 224
 -- Data for Name: producenci; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -530,7 +530,7 @@ COPY public.producenci (id_producenta, nazwa_producenta, kraj_pochodzenia) FROM 
 
 
 --
--- TOC entry 3564 (class 0 OID 41635)
+-- TOC entry 3562 (class 0 OID 41828)
 -- Dependencies: 228
 -- Data for Name: produkty; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -542,7 +542,7 @@ COPY public.produkty (id_produktu, id_kategorii, id_producenta, nazwa, opis, cen
 
 
 --
--- TOC entry 3571 (class 0 OID 41731)
+-- TOC entry 3569 (class 0 OID 41924)
 -- Dependencies: 235
 -- Data for Name: wysylki; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -553,7 +553,7 @@ COPY public.wysylki (id_wysylki, id_zamowienia, firma_kurierska, numer_listu, st
 
 
 --
--- TOC entry 3566 (class 0 OID 41665)
+-- TOC entry 3564 (class 0 OID 41858)
 -- Dependencies: 230
 -- Data for Name: zamowienia; Type: TABLE DATA; Schema: public; Owner: -
 --
@@ -564,7 +564,7 @@ COPY public.zamowienia (id_zamowienia, id_klienta, id_kodu, znizka_zastosowana, 
 
 
 --
--- TOC entry 3588 (class 0 OID 0)
+-- TOC entry 3586 (class 0 OID 0)
 -- Dependencies: 221
 -- Name: kategorie_id_kategorii_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
@@ -573,7 +573,7 @@ SELECT pg_catalog.setval('public.kategorie_id_kategorii_seq', 1, true);
 
 
 --
--- TOC entry 3589 (class 0 OID 0)
+-- TOC entry 3587 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: klienci_id_klienta_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
@@ -582,7 +582,7 @@ SELECT pg_catalog.setval('public.klienci_id_klienta_seq', 1, true);
 
 
 --
--- TOC entry 3590 (class 0 OID 0)
+-- TOC entry 3588 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: kody_rabatowe_id_kodu_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
@@ -591,7 +591,7 @@ SELECT pg_catalog.setval('public.kody_rabatowe_id_kodu_seq', 1, true);
 
 
 --
--- TOC entry 3591 (class 0 OID 0)
+-- TOC entry 3589 (class 0 OID 0)
 -- Dependencies: 236
 -- Name: opinie_id_opinii_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
@@ -600,7 +600,7 @@ SELECT pg_catalog.setval('public.opinie_id_opinii_seq', 2, true);
 
 
 --
--- TOC entry 3592 (class 0 OID 0)
+-- TOC entry 3590 (class 0 OID 0)
 -- Dependencies: 231
 -- Name: platnosci_id_platnosci_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
@@ -609,7 +609,7 @@ SELECT pg_catalog.setval('public.platnosci_id_platnosci_seq', 1, true);
 
 
 --
--- TOC entry 3593 (class 0 OID 0)
+-- TOC entry 3591 (class 0 OID 0)
 -- Dependencies: 223
 -- Name: producenci_id_producenta_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
@@ -618,7 +618,7 @@ SELECT pg_catalog.setval('public.producenci_id_producenta_seq', 2, true);
 
 
 --
--- TOC entry 3594 (class 0 OID 0)
+-- TOC entry 3592 (class 0 OID 0)
 -- Dependencies: 227
 -- Name: produkty_id_produktu_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
@@ -627,7 +627,7 @@ SELECT pg_catalog.setval('public.produkty_id_produktu_seq', 2, true);
 
 
 --
--- TOC entry 3595 (class 0 OID 0)
+-- TOC entry 3593 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: wysylki_id_wysylki_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
@@ -636,7 +636,7 @@ SELECT pg_catalog.setval('public.wysylki_id_wysylki_seq', 1, true);
 
 
 --
--- TOC entry 3596 (class 0 OID 0)
+-- TOC entry 3594 (class 0 OID 0)
 -- Dependencies: 229
 -- Name: zamowienia_id_zamowienia_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
@@ -644,294 +644,10 @@ SELECT pg_catalog.setval('public.wysylki_id_wysylki_seq', 1, true);
 SELECT pg_catalog.setval('public.zamowienia_id_zamowienia_seq', 1, true);
 
 
---
--- TOC entry 3360 (class 2606 OID 41609)
--- Name: kategorie kategorie_nazwa_kategorii_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.kategorie
-    ADD CONSTRAINT kategorie_nazwa_kategorii_key UNIQUE (nazwa_kategorii);
-
-
---
--- TOC entry 3362 (class 2606 OID 41607)
--- Name: kategorie kategorie_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.kategorie
-    ADD CONSTRAINT kategorie_pkey PRIMARY KEY (id_kategorii);
-
-
---
--- TOC entry 3356 (class 2606 OID 41598)
--- Name: klienci klienci_email_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.klienci
-    ADD CONSTRAINT klienci_email_key UNIQUE (email);
-
-
---
--- TOC entry 3358 (class 2606 OID 41596)
--- Name: klienci klienci_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.klienci
-    ADD CONSTRAINT klienci_pkey PRIMARY KEY (id_klienta);
-
-
---
--- TOC entry 3368 (class 2606 OID 41633)
--- Name: kody_rabatowe kody_rabatowe_kod_tekstowy_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.kody_rabatowe
-    ADD CONSTRAINT kody_rabatowe_kod_tekstowy_key UNIQUE (kod_tekstowy);
-
-
---
--- TOC entry 3370 (class 2606 OID 41631)
--- Name: kody_rabatowe kody_rabatowe_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.kody_rabatowe
-    ADD CONSTRAINT kody_rabatowe_pkey PRIMARY KEY (id_kodu);
-
-
---
--- TOC entry 3396 (class 2606 OID 41762)
--- Name: opinie opinie_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.opinie
-    ADD CONSTRAINT opinie_pkey PRIMARY KEY (id_opinii);
-
-
---
--- TOC entry 3382 (class 2606 OID 41703)
--- Name: platnosci platnosci_id_zamowienia_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.platnosci
-    ADD CONSTRAINT platnosci_id_zamowienia_key UNIQUE (id_zamowienia);
-
-
---
--- TOC entry 3384 (class 2606 OID 41701)
--- Name: platnosci platnosci_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.platnosci
-    ADD CONSTRAINT platnosci_pkey PRIMARY KEY (id_platnosci);
-
-
---
--- TOC entry 3387 (class 2606 OID 41719)
--- Name: pozycje_zamowienia pozycje_zamowienia_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.pozycje_zamowienia
-    ADD CONSTRAINT pozycje_zamowienia_pkey PRIMARY KEY (id_zamowienia, id_produktu);
-
-
---
--- TOC entry 3364 (class 2606 OID 41620)
--- Name: producenci producenci_nazwa_producenta_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.producenci
-    ADD CONSTRAINT producenci_nazwa_producenta_key UNIQUE (nazwa_producenta);
-
-
---
--- TOC entry 3366 (class 2606 OID 41618)
--- Name: producenci producenci_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.producenci
-    ADD CONSTRAINT producenci_pkey PRIMARY KEY (id_producenta);
-
-
---
--- TOC entry 3374 (class 2606 OID 41651)
--- Name: produkty produkty_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.produkty
-    ADD CONSTRAINT produkty_pkey PRIMARY KEY (id_produktu);
-
-
---
--- TOC entry 3398 (class 2606 OID 41764)
--- Name: opinie uq_opinie_pozycja; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.opinie
-    ADD CONSTRAINT uq_opinie_pozycja UNIQUE (id_zamowienia, id_produktu);
-
-
---
--- TOC entry 3376 (class 2606 OID 41653)
--- Name: produkty uq_produkty_nazwa_producent; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.produkty
-    ADD CONSTRAINT uq_produkty_nazwa_producent UNIQUE (nazwa, id_producenta);
-
-
---
--- TOC entry 3390 (class 2606 OID 41741)
--- Name: wysylki wysylki_id_zamowienia_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.wysylki
-    ADD CONSTRAINT wysylki_id_zamowienia_key UNIQUE (id_zamowienia);
-
-
---
--- TOC entry 3392 (class 2606 OID 41743)
--- Name: wysylki wysylki_numer_listu_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.wysylki
-    ADD CONSTRAINT wysylki_numer_listu_key UNIQUE (numer_listu);
-
-
---
--- TOC entry 3394 (class 2606 OID 41739)
--- Name: wysylki wysylki_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.wysylki
-    ADD CONSTRAINT wysylki_pkey PRIMARY KEY (id_wysylki);
-
-
---
--- TOC entry 3379 (class 2606 OID 41679)
--- Name: zamowienia zamowienia_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.zamowienia
-    ADD CONSTRAINT zamowienia_pkey PRIMARY KEY (id_zamowienia);
-
-
---
--- TOC entry 3385 (class 1259 OID 41773)
--- Name: idx_pozycje_produkt; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_pozycje_produkt ON public.pozycje_zamowienia USING btree (id_produktu);
-
-
---
--- TOC entry 3371 (class 1259 OID 41770)
--- Name: idx_produkty_kategoria; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_produkty_kategoria ON public.produkty USING btree (id_kategorii);
-
-
---
--- TOC entry 3372 (class 1259 OID 41771)
--- Name: idx_produkty_producent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_produkty_producent ON public.produkty USING btree (id_producenta);
-
-
---
--- TOC entry 3377 (class 1259 OID 41772)
--- Name: idx_zamowienia_klient; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_zamowienia_klient ON public.zamowienia USING btree (id_klienta);
-
-
---
--- TOC entry 3407 (class 2606 OID 41765)
--- Name: opinie fk_opinie_pozycje; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.opinie
-    ADD CONSTRAINT fk_opinie_pozycje FOREIGN KEY (id_zamowienia, id_produktu) REFERENCES public.pozycje_zamowienia(id_zamowienia, id_produktu) ON DELETE CASCADE;
-
-
---
--- TOC entry 3403 (class 2606 OID 41704)
--- Name: platnosci fk_platnosci_zamowienia; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.platnosci
-    ADD CONSTRAINT fk_platnosci_zamowienia FOREIGN KEY (id_zamowienia) REFERENCES public.zamowienia(id_zamowienia) ON DELETE CASCADE;
-
-
---
--- TOC entry 3404 (class 2606 OID 41725)
--- Name: pozycje_zamowienia fk_pozycje_produkty; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.pozycje_zamowienia
-    ADD CONSTRAINT fk_pozycje_produkty FOREIGN KEY (id_produktu) REFERENCES public.produkty(id_produktu) ON DELETE RESTRICT;
-
-
---
--- TOC entry 3405 (class 2606 OID 41720)
--- Name: pozycje_zamowienia fk_pozycje_zamowienia; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.pozycje_zamowienia
-    ADD CONSTRAINT fk_pozycje_zamowienia FOREIGN KEY (id_zamowienia) REFERENCES public.zamowienia(id_zamowienia) ON DELETE CASCADE;
-
-
---
--- TOC entry 3399 (class 2606 OID 41654)
--- Name: produkty fk_produkty_kategorie; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.produkty
-    ADD CONSTRAINT fk_produkty_kategorie FOREIGN KEY (id_kategorii) REFERENCES public.kategorie(id_kategorii) ON DELETE RESTRICT;
-
-
---
--- TOC entry 3400 (class 2606 OID 41659)
--- Name: produkty fk_produkty_producenci; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.produkty
-    ADD CONSTRAINT fk_produkty_producenci FOREIGN KEY (id_producenta) REFERENCES public.producenci(id_producenta) ON DELETE RESTRICT;
-
-
---
--- TOC entry 3406 (class 2606 OID 41744)
--- Name: wysylki fk_wysylki_zamowienia; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.wysylki
-    ADD CONSTRAINT fk_wysylki_zamowienia FOREIGN KEY (id_zamowienia) REFERENCES public.zamowienia(id_zamowienia) ON DELETE CASCADE;
-
-
---
--- TOC entry 3401 (class 2606 OID 41680)
--- Name: zamowienia fk_zamowienia_klienci; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.zamowienia
-    ADD CONSTRAINT fk_zamowienia_klienci FOREIGN KEY (id_klienta) REFERENCES public.klienci(id_klienta) ON DELETE RESTRICT;
-
-
---
--- TOC entry 3402 (class 2606 OID 41685)
--- Name: zamowienia fk_zamowienia_kody; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.zamowienia
-    ADD CONSTRAINT fk_zamowienia_kody FOREIGN KEY (id_kodu) REFERENCES public.kody_rabatowe(id_kodu) ON DELETE SET NULL;
-
-
--- Completed on 2026-06-20 09:53:21 CEST
+-- Completed on 2026-06-20 10:33:11 CEST
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 6aBQwABrCT133TxImnK2H8cagQUhLFGatftSUIrsriNSQxGDsFazjq6eihrYiNO
+\unrestrict tL15aTvr1K5F5PJf0Cgwd1tdEQK3VBFrZuQqNM1dIddKMGTSkGgkxXfNGGynH75
